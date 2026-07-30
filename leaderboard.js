@@ -1,15 +1,15 @@
-import { getFirestoreApi } from "./firebase-app.js?v=31";
-import { getClientId } from "./chat.js?v=31";
-import { getFingerprint } from "./fingerprint.js?v=31";
+import { getFirestoreApi } from "./firebase-app.js?v=32";
+import { getClientId } from "./chat.js?v=32";
+import { getFingerprint } from "./fingerprint.js?v=32";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
 const TOP_N = 10;
 
-// 랭킹은 매일 한국시간 17:30에 초기화된다. 기록을 지우는 대신
+// 랭킹은 매일 한국시간 18:00에 초기화된다. 룰렛 회차와 같은 기준이다. 기록을 지우는 대신
 // 직전 17:30 이후에 등록된 기록만 보여주는 방식이라 예약 작업이 필요 없다.
-const RESET_HOUR_KST = 17;
-const RESET_MINUTE_KST = 30;
+const RESET_HOUR_KST = 18;
+const RESET_MINUTE_KST = 0;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 

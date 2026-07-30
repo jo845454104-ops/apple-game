@@ -112,12 +112,30 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 룰렛 회차 구분. 한국시간 18시(UTC 9시)에 하루가 바뀐다.
+    function periodKey() {
+      return string(
+        request.time.year() * 1000 +
+        (request.time.hours() >= 9
+          ? request.time.dayOfYear()
+          : request.time.dayOfYear() - 1)
+      );
+    }
+
     // 룰렛 당첨 기록. 등록만 가능하고 수정·삭제는 막는다.
+    // 문서 ID를 "닉네임__회차__번호"로 고정해, 번호가 1~3으로 제한되고
+    // 같은 ID를 다시 만들 수 없어 하루 3회를 서버가 강제한다.
     match /rewards/{doc} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasOnly(
-          ['name', 'prize', 'score', 'cid', 'fp', 'createdAt']
+          ['name', 'nk', 'n', 'prize', 'score', 'cid', 'fp', 'createdAt']
         )
+        && request.resource.data.n is int
+        && request.resource.data.n >= 1
+        && request.resource.data.n <= 3
+        && request.resource.data.nk is string
+        && request.resource.data.nk.size() > 0
+        && doc == request.resource.data.nk + '__' + periodKey() + '__' + string(request.resource.data.n)
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 12

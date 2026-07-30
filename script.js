@@ -1,12 +1,16 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=31";
-import { findTargeted } from "./profanity.js?v=31";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=32";
+import { findTargeted } from "./profanity.js?v=32";
 import {
   ROULETTE_MIN_SCORE,
+  DAILY_SPINS,
   segments,
   drawPrize,
   recordPrize,
   watchPrizes,
-} from "./roulette.js?v=31";
+  remainingSpins,
+  nextResetAt,
+} from "./roulette.js?v=32";
+import { nicknameKey } from "./profanity.js?v=32";
 import {
   getNickname,
   setNickname,
@@ -25,7 +29,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=31";
+} from "./chat.js?v=32";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -393,7 +397,7 @@ async function openRanking() {
   try {
     const { online, scores } = await fetchTopScores();
     const next = getNextReset();
-    const resetNote = `매일 오후 5:30 초기화 · 다음 초기화 ${next.toLocaleString("ko-KR", {
+    const resetNote = `매일 오후 6시 초기화 · 다음 초기화 ${next.toLocaleString("ko-KR", {
       month: "numeric",
       day: "numeric",
       hour: "2-digit",
@@ -657,6 +661,7 @@ const rouletteResultEl = document.getElementById("roulette-result");
 const rouletteSpinBtn = document.getElementById("roulette-spin");
 const rouletteCloseBtn = document.getElementById("roulette-close");
 const rouletteCongratsEl = document.getElementById("roulette-congrats");
+const rouletteSubEl = document.getElementById("roulette-sub");
 const tickerEl = document.getElementById("prize-ticker");
 const tickerTrackEl = document.getElementById("prize-ticker-track");
 
@@ -670,7 +675,7 @@ wheelEl.style.background = `conic-gradient(${SEGMENTS.map(
   (s) => `${s.color} ${s.start}deg ${s.end}deg`
 ).join(", ")})`;
 
-function openRoulette(score) {
+async function openRoulette(score) {
   rouletteScore = score;
   spinning = false;
   wheelAngle = 0;
@@ -679,10 +684,21 @@ function openRoulette(score) {
   rouletteResultEl.textContent = "";
   rouletteResultEl.className = "roulette__result";
   rouletteCongratsEl.textContent = `🎊 ${score}점 달성! 축하합니다`;
+  rouletteCloseBtn.hidden = false;
+  rouletteEl.hidden = false;
+
+  const left = await remainingSpins(nicknameKey(getNickname()));
+  const reset = nextResetAt().toLocaleString("ko-KR", {
+    month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  if (left <= 0) {
+    rouletteSubEl.textContent = `오늘 기회를 모두 썼습니다 · ${reset}에 초기화`;
+    rouletteSpinBtn.hidden = true;
+    return;
+  }
+  rouletteSubEl.textContent = `남은 기회 ${left}/${DAILY_SPINS}회 · ${reset}에 초기화`;
   rouletteSpinBtn.hidden = false;
   rouletteSpinBtn.disabled = false;
-  rouletteCloseBtn.hidden = true;
-  rouletteEl.hidden = false;
 }
 
 rouletteSpinBtn.addEventListener("click", async () => {
@@ -709,9 +725,26 @@ rouletteSpinBtn.addEventListener("click", async () => {
     spinning = false;
 
     try {
-      await recordPrize(getNickname(), prize.label, rouletteScore);
+      const res = await recordPrize(
+        getNickname(),
+        nicknameKey(getNickname()),
+        prize.label,
+        rouletteScore
+      );
+      if (!res.ok) {
+        rouletteResultEl.textContent = res.reason;
+        rouletteResultEl.className = "roulette__result is-lose";
+        rouletteSpinBtn.hidden = true;
+      } else if (res.left > 0) {
+        rouletteSubEl.textContent = `남은 기회 ${res.left}/${DAILY_SPINS}회`;
+        rouletteSpinBtn.disabled = false;
+      } else {
+        rouletteSubEl.textContent = "오늘 기회를 모두 사용했습니다";
+        rouletteSpinBtn.hidden = true;
+      }
     } catch (err) {
       console.error("당첨 기록 실패", err);
+      rouletteResultEl.textContent = "기록에 실패했습니다.";
     }
   }, 4100);
 });
