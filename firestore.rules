@@ -38,10 +38,10 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['name', 'text', 'createdAt'])
         && request.resource.data.createdAt == request.time;
       allow update: if false;
-      // 대화가 100개를 넘으면 오래된 것부터 정리한다.
-      // 10분이 지난 메시지만 지울 수 있어 진행 중인 대화는 건드릴 수 없다.
+      // 2시간이 지났거나 100개를 넘긴 대화를 오래된 것부터 정리한다.
+      // 2분이 지나야 삭제할 수 있어 방금 오간 대화는 누구도 지울 수 없다.
       allow delete: if resource.data.createdAt is timestamp
-        && resource.data.createdAt < request.time - duration.value(10, 'm');
+        && resource.data.createdAt < request.time - duration.value(2, 'm');
     }
 
     // 접속자 수 집계용 단일 문서. 각 클라이언트가 자기 항목만 갱신한다.

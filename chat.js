@@ -2,8 +2,8 @@ import { getFirestoreApi } from "./firebase-app.js";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
-const PRUNE_TRIGGER = MESSAGE_LIMIT + 40;
-const PRUNE_INTERVAL_MS = 60000;
+const MESSAGE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+const PRUNE_INTERVAL_MS = 30000;
 const NICK_KEY = "apple-game-nickname";
 
 // 접속자 수는 모두가 주기적으로 신호를 보내야 해서 실시간 리스너를 쓰면
@@ -71,8 +71,10 @@ export async function sendMessage(nickname, text) {
 
 let lastPruneAt = 0;
 
-// 최근 100개만 남기고 오래된 대화를 지운다. 규칙상 10분이 지난 메시지만
-// 삭제할 수 있으므로 방금 올라온 대화가 사라질 일은 없다.
+// 두 가지 기준으로 대화를 정리한다.
+//  1) 올라온 지 2시간이 지난 메시지는 개수와 상관없이 삭제
+//  2) 100개를 넘으면 오래된 것부터 삭제해 100개만 남김
+// 규칙상 2분이 지나야 삭제할 수 있어, 방금 오간 대화는 누구도 지울 수 없다.
 async function pruneOldMessages(db, api) {
   const now = Date.now();
   if (now - lastPruneAt < PRUNE_INTERVAL_MS) return;
@@ -80,15 +82,35 @@ async function pruneOldMessages(db, api) {
 
   try {
     const coll = api.collection(db, MESSAGES);
+    const remove = new Map();
+
+    const expired = await api.getDocs(
+      api.query(
+        coll,
+        api.where(
+          "createdAt",
+          "<",
+          api.Timestamp.fromMillis(now - MESSAGE_MAX_AGE_MS)
+        ),
+        api.limit(100)
+      )
+    );
+    expired.docs.forEach((d) => remove.set(d.id, d.ref));
+
     const countSnap = await api.getCountFromServer(coll);
     const total = countSnap.data().count;
-    if (total < PRUNE_TRIGGER) return;
+    if (total > MESSAGE_LIMIT) {
+      const excess = Math.min(total - MESSAGE_LIMIT, 100);
+      const oldest = await api.getDocs(
+        api.query(coll, api.orderBy("createdAt", "asc"), api.limit(excess))
+      );
+      oldest.docs.forEach((d) => remove.set(d.id, d.ref));
+    }
 
-    const excess = Math.min(total - MESSAGE_LIMIT, 60);
-    const oldest = await api.getDocs(
-      api.query(coll, api.orderBy("createdAt", "asc"), api.limit(excess))
+    if (remove.size === 0) return;
+    await Promise.all(
+      [...remove.values()].map((ref) => api.deleteDoc(ref).catch(() => {}))
     );
-    await Promise.all(oldest.docs.map((d) => api.deleteDoc(d.ref).catch(() => {})));
   } catch (err) {
     console.error("오래된 대화 정리 실패", err);
   }
@@ -111,7 +133,7 @@ export async function watchMessages(onMessages) {
     (snap) => {
       const list = snap.docs.map((d) => d.data()).reverse();
       onMessages(list);
-      if (snap.size >= MESSAGE_LIMIT) pruneOldMessages(db, api);
+      pruneOldMessages(db, api);
     },
     (err) => {
       console.error("채팅 구독 실패", err);
