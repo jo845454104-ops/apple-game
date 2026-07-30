@@ -6,6 +6,7 @@ const ROWS = 10;
 const TARGET_SUM = 10;
 
 const gridEl = document.getElementById("apple-grid");
+const boardEl = gridEl.parentElement;
 const selectionBox = document.getElementById("selection-box");
 const sumBadge = document.getElementById("sum-badge");
 const scoreEl = document.getElementById("score");
@@ -82,14 +83,14 @@ function buildGrid() {
 }
 
 function measureRects() {
-  const gridRect = gridEl.getBoundingClientRect();
+  const boardRect = boardEl.getBoundingClientRect();
   apples.forEach((apple) => {
     const r = apple.el.getBoundingClientRect();
     apple.rect = {
-      left: r.left - gridRect.left,
-      top: r.top - gridRect.top,
-      right: r.right - gridRect.left,
-      bottom: r.bottom - gridRect.top,
+      left: r.left - boardRect.left,
+      top: r.top - boardRect.top,
+      right: r.right - boardRect.left,
+      bottom: r.bottom - boardRect.top,
     };
   });
 }
@@ -172,7 +173,7 @@ function finalizeSelection() {
 }
 
 function relativePoint(e) {
-  const rect = gridEl.getBoundingClientRect();
+  const rect = boardEl.getBoundingClientRect();
   const point = e.touches ? e.touches[0] : e;
   return {
     x: Math.min(Math.max(point.clientX - rect.left, 0), rect.width),
@@ -187,7 +188,7 @@ function handlePointerDown(e) {
   startX = p.x;
   startY = p.y;
   measureRects();
-  gridEl.setPointerCapture?.(e.pointerId);
+  boardEl.setPointerCapture?.(e.pointerId);
   updateSelectionVisual(getSelectionRect(startX, startY));
 }
 
@@ -365,7 +366,7 @@ function stopBgm() {
   bgmNodes = null;
 }
 
-gridEl.addEventListener("pointerdown", handlePointerDown);
+boardEl.addEventListener("pointerdown", handlePointerDown);
 window.addEventListener("pointermove", handlePointerMove);
 window.addEventListener("pointerup", handlePointerUp);
 
