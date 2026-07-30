@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=19";
-import { findTargeted } from "./profanity.js?v=19";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=20";
+import { findTargeted } from "./profanity.js?v=20";
 import {
   getNickname,
   setNickname,
@@ -15,7 +15,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=19";
+} from "./chat.js?v=20";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -871,9 +871,17 @@ if (targeted) {
   lockOut(`사용이 금지된 닉네임 사용 (${targeted})`);
 }
 
-// 브라우저 저장소를 지우고 다시 들어와도 서버 기록으로 다시 막는다
-isBlockedOnServer().then((serverReason) => {
+// 차단은 즉시 반영돼야 한다. 페이지를 열 때 한 번만 보면
+// 이미 켜둔 창에서는 계속 플레이할 수 있으므로 주기적으로 다시 확인한다.
+async function checkBlockNow() {
+  const serverReason = await isBlockedOnServer();
   if (serverReason) lockOut(serverReason, { report: false });
+}
+
+checkBlockNow();
+window.setInterval(checkBlockNow, 15000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) checkBlockNow();
 });
 
 // 이미 닉네임을 쓰고 있던 사람도 접속 시 소유권을 확보한다.
