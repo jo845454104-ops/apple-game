@@ -888,3 +888,64 @@ body {
     width: var(--time-pct, 100%);
   }
 }
+
+.lockout {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 22, 0.94);
+  backdrop-filter: blur(6px);
+  padding: 20px;
+}
+
+.lockout[hidden] {
+  display: none;
+}
+
+.lockout__card {
+  max-width: 420px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--apple-red);
+  border-radius: 20px;
+  padding: 34px 30px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.lockout__icon {
+  font-size: 44px;
+  margin-bottom: 10px;
+}
+
+.lockout__title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--apple-red);
+  margin-bottom: 12px;
+}
+
+.lockout__desc {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--slate-600);
+  margin-bottom: 14px;
+}
+
+.lockout__code {
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--slate-400);
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 14px;
+  word-break: break-all;
+}
+
+.lockout__note {
+  font-size: 12px;
+  color: var(--slate-400);
+}

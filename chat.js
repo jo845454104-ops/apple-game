@@ -1,4 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=8";
+import { getFirestoreApi } from "./firebase-app.js?v=10";
+import { isClean, findProfanity } from "./profanity.js?v=10";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -33,9 +34,48 @@ function loadClientId() {
 
 const clientId = loadClientId();
 
+export function getClientId() {
+  return clientId;
+}
+
+// 조작이 감지된 기기를 서버에 남긴다. 브라우저 저장소를 지워도
+// 같은 기기 ID면 다시 차단된다.
+export async function reportCheat(reason, name) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return;
+  const { db, api } = ctx;
+  try {
+    await api.setDoc(api.doc(db, "blocked", clientId), {
+      reason: String(reason).slice(0, 200),
+      name: String(name || "").slice(0, 12),
+      createdAt: api.serverTimestamp(),
+    });
+  } catch (err) {
+    console.error("차단 기록 실패", err);
+  }
+}
+
+export async function isBlockedOnServer() {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return null;
+  const { db, api } = ctx;
+  try {
+    const snap = await api.getDoc(api.doc(db, "blocked", clientId));
+    return snap.exists() ? snap.data().reason || "부정 행위 감지" : null;
+  } catch {
+    return null;
+  }
+}
+
 export function getNickname() {
   try {
-    return localStorage.getItem(NICK_KEY) || "";
+    const saved = localStorage.getItem(NICK_KEY) || "";
+    // 예전에 정해둔 닉네임이라도 금지어가 들어 있으면 무효로 하고 다시 받는다
+    if (saved && !isClean(saved)) {
+      localStorage.removeItem(NICK_KEY);
+      return "";
+    }
+    return saved;
   } catch {
     return "";
   }
@@ -46,9 +86,17 @@ export function hasNickname() {
 }
 
 // 닉네임은 이 브라우저에 계속 남고, 한 번 정하면 다시 바꿀 수 없다.
+export function checkNickname(name) {
+  const trimmed = String(name).trim().slice(0, 12);
+  if (!trimmed) return "닉네임을 입력해주세요.";
+  const bad = findProfanity(trimmed);
+  if (bad) return "사용할 수 없는 표현이 포함되어 있습니다.";
+  return null;
+}
+
 export function setNickname(name) {
   const trimmed = name.trim().slice(0, 12);
-  if (!trimmed) return "";
+  if (!trimmed || !isClean(trimmed)) return "";
   try {
     if (localStorage.getItem(NICK_KEY)) return localStorage.getItem(NICK_KEY);
     localStorage.setItem(NICK_KEY, trimmed);

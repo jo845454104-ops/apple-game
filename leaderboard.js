@@ -1,4 +1,4 @@
-import { getFirestoreApi } from "./firebase-app.js?v=8";
+import { getFirestoreApi } from "./firebase-app.js?v=10";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
@@ -64,9 +64,9 @@ function fetchLocalTopScores() {
 export function checkPlausible({ score, clears, durationMs }) {
   if (!Number.isInteger(score) || score < 0 || score > 170) return "점수 범위 오류";
   if (!Number.isInteger(clears) || clears < 0) return "매칭 횟수 오류";
-  if (score > 0 && (clears * 2 > score || clears * 10 < score)) return "매칭 기록 불일치";
+  if (score > 0 && (clears * 2 > score || clears * 4 < score)) return "매칭 기록 불일치";
   if (!Number.isFinite(durationMs) || durationMs > 125000) return "플레이 시간 오류";
-  if (durationMs < score * 150) return "플레이 시간이 점수에 비해 너무 짧습니다";
+  if (durationMs < score * 350) return "플레이 시간이 점수에 비해 너무 짧습니다";
   return null;
 }
 

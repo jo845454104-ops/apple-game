@@ -1,12 +1,15 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=8";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=10";
 import {
   getNickname,
   setNickname,
+  checkNickname,
   hasNickname,
   sendMessage,
   watchMessages,
   startPresence,
-} from "./chat.js?v=8";
+  reportCheat,
+  isBlockedOnServer,
+} from "./chat.js?v=10";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -243,6 +246,10 @@ function tick() {
 }
 
 function startGame() {
+  if (isBlocked()) {
+    lockOut(isBlocked());
+    return;
+  }
   score = 0;
   timeLeft = GAME_SECONDS;
   scoreSubmitted = false;
@@ -303,8 +310,9 @@ async function handleSubmitScore() {
   let name = getNickname();
   if (!name) {
     const typed = playerNameInput.value.trim();
-    if (!typed) {
-      submitStatusEl.textContent = "닉네임을 입력해주세요.";
+    const nickProblem = checkNickname(typed);
+    if (nickProblem) {
+      submitStatusEl.textContent = nickProblem;
       return;
     }
     name = setNickname(typed);
@@ -328,6 +336,14 @@ async function handleSubmitScore() {
       : "로컬 랭킹에 저장되었습니다 (온라인 랭킹 미설정)";
   } catch (err) {
     console.error(err);
+    // 정상 플레이로는 나올 수 없는 기록이면 조작으로 보고 잠근다.
+    const tampered =
+      err.code === "permission-denied" ||
+      /점수 범위|매칭|플레이 시간/.test(err.message ?? "");
+    if (tampered) {
+      lockOut(err.message || "서버 검증 실패");
+      return;
+    }
     submitStatusEl.textContent = `등록 실패: ${err.message}`;
     submitScoreBtn.disabled = false;
     submitScoreBtnFixed.disabled = false;
@@ -456,6 +472,34 @@ bgmToggle.addEventListener("change", () => {
   else stopBgm();
 });
 
+const CHEAT_KEY = "apple-game-blocked";
+const lockoutEl = document.getElementById("lockout");
+const lockoutReasonEl = document.getElementById("lockout-reason");
+
+// 조작이 감지되면 이 기기에서 게임을 더 진행할 수 없게 막는다.
+function lockOut(reason, { report = true } = {}) {
+  try {
+    localStorage.setItem(CHEAT_KEY, reason);
+  } catch {
+    /* 저장이 막혀 있어도 이번 화면은 잠긴다 */
+  }
+  // 저장소를 지워도 다시 막히도록 서버에도 남긴다
+  if (report) reportCheat(reason, getNickname());
+  playing = false;
+  isSelecting = false;
+  window.clearInterval(timerId);
+  lockoutReasonEl.textContent = `사유: ${reason}`;
+  lockoutEl.hidden = false;
+}
+
+function isBlocked() {
+  try {
+    return localStorage.getItem(CHEAT_KEY);
+  } catch {
+    return null;
+  }
+}
+
 const THEME_KEY = "apple-game-theme";
 const themeBtn = document.getElementById("theme-btn");
 const themeIconEl = document.getElementById("theme-icon");
@@ -548,8 +592,9 @@ function renderMessages(list) {
 
 function saveNicknameFromInput() {
   const value = nickInput.value.trim();
-  if (!value) {
-    chatStatusEl.textContent = "닉네임을 입력해주세요.";
+  const problem = checkNickname(value);
+  if (problem) {
+    chatStatusEl.textContent = problem;
     return;
   }
   setNickname(value);
@@ -583,6 +628,17 @@ chatForm.addEventListener("submit", async (e) => {
     chatSendBtn.disabled = !getNickname();
     chatInput.focus();
   }
+});
+
+const blockedReason = isBlocked();
+if (blockedReason) {
+  lockoutReasonEl.textContent = `사유: ${blockedReason}`;
+  lockoutEl.hidden = false;
+}
+
+// 브라우저 저장소를 지우고 다시 들어와도 서버 기록으로 다시 막는다
+isBlockedOnServer().then((serverReason) => {
+  if (serverReason) lockOut(serverReason, { report: false });
 });
 
 renderNickname();
