@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=24";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=24";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=24";
+import { getFirestoreApi } from "./firebase-app.js?v=25";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=25";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=25";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -172,6 +172,19 @@ export async function blockClient(targetId, name, fingerprint, hardware) {
 }
 
 // 운영자용: 최근 채팅을 가져온다 (삭제 대상 선택용)
+// 운영자 긴급 스위치 상태. config/settings.chatLocked 로 채팅을 잠근다.
+export async function fetchChatLocked() {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return false;
+  const { db, api } = ctx;
+  try {
+    const snap = await api.getDoc(api.doc(db, "config", "settings"));
+    return snap.exists() ? snap.data().chatLocked === true : false;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchRecentMessages(limit = 40) {
   const ctx = await getFirestoreApi();
   if (!ctx) return [];
@@ -306,7 +319,26 @@ export function setNickname(name) {
   return trimmed;
 }
 
+const SEND_COOLDOWN_MS = 1500;
+let lastSentAt = 0;
+let lastSentText = "";
+
+// 서버 규칙으로 잡기 어려운 도배 패턴을 여기서 먼저 거른다.
+export function checkMessage(text) {
+  const trimmed = String(text).trim();
+  if (!trimmed) return "메시지를 입력하세요.";
+  if (Date.now() - lastSentAt < SEND_COOLDOWN_MS) {
+    return "너무 빠릅니다. 잠시 후 다시 보내세요.";
+  }
+  if (trimmed === lastSentText) return "같은 메시지를 연달아 보낼 수 없습니다.";
+  if (/^(.)\1{4,}$/.test(trimmed)) return "같은 글자만 반복할 수 없습니다.";
+  if (/^[.,!?~\-_/\s]+$/.test(trimmed)) return "의미 있는 내용을 입력하세요.";
+  return null;
+}
+
 export async function sendMessage(nickname, text) {
+  const problem = checkMessage(text);
+  if (problem) throw new Error(problem);
   const ctx = await getFirestoreApi();
   if (!ctx) throw new Error("채팅 서버에 연결되어 있지 않습니다.");
   const { db, api } = ctx;
@@ -319,6 +351,8 @@ export async function sendMessage(nickname, text) {
     nk: nicknameKey(nickname),
     createdAt: api.serverTimestamp(),
   });
+  lastSentAt = Date.now();
+  lastSentText = String(text).trim();
 }
 
 let lastPruneAt = 0;

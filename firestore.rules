@@ -16,6 +16,18 @@ service cloud.firestore {
       return exists(key) && get(key).data.owner == cid;
     }
 
+    // 운영자 긴급 스위치. config/settings 문서로 채팅을 즉시 잠글 수 있다.
+    function chatOpen() {
+      let key = /databases/$(database)/documents/config/settings;
+      return !exists(key) || get(key).data.get('chatLocked', false) == false;
+    }
+
+    // 기호나 공백만으로 된 도배는 서버에서 거른다.
+    // (같은 글자 반복은 역참조가 필요해 규칙에서 못 잡으므로 클라이언트에서 처리한다)
+    function notSpam(text) {
+      return !text.matches('^[.,!?~\\-_/\\s]+$');
+    }
+
     function cleanName(name) {
       return !name.lower().matches('.*(시발|씨발|시바|씨바|쉬발|쒸발|시팔|씨팔|십알|병신|븅신|빙신|등신|좆|좇|존나|졸라|존만|지랄|니미|애미|애비|느금|새끼|쌔끼|새기|개새|개년|개놈|썅|쌍놈|쌍년|미친놈|미친년|또라이|돌아이|보지|자지|꼬추|섹스|야동|강간|젖탱|게이|레즈|호모|트젠|장애인|찐따|일베|틀딱|급식충|맘충|한남|김치녀|자살|꺼져|fuck|shit|bitch|asshole|dick|pussy|gay|fag|정식).*');
     }
@@ -64,6 +76,8 @@ service cloud.firestore {
         && request.resource.data.cid is string
         && request.resource.data.cid.size() > 0
         && notBlocked(request.resource.data.cid)
+        && chatOpen()
+        && notSpam(request.resource.data.text)
         && request.resource.data.createdAt == request.time;
       allow update: if false;
       // 2시간이 지났거나 100개를 넘긴 대화를 오래된 것부터 정리한다.
@@ -94,6 +108,12 @@ service cloud.firestore {
         && request.resource.data.reason.size() <= 200
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
+    }
+
+    // 운영자 설정. 읽기만 공개하고 변경은 관리 도구(CLI)로만 한다.
+    match /config/settings {
+      allow read: if true;
+      allow write: if false;
     }
 
     // 접속자 수 집계용 단일 문서. 각 클라이언트가 자기 항목만 갱신한다.

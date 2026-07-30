@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🍎 사과게임 - DSA 아카데미</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=25" />
   <script>
     // 스타일이 적용되기 전에 테마를 정해 화면이 번쩍이는 것을 막는다.
     try {
@@ -191,6 +191,12 @@
         <ol class="ranking-list" id="admin-score-list"></ol>
 
         <h3 class="admin-subtitle">🔧 도구</h3>
+        <p class="admin-hint">채팅 상태: <strong id="admin-chat-lock-state">확인 중...</strong></p>
+        <p class="admin-hint">
+          긴급 잠금은 Firebase 콘솔에서 <code>config/settings</code> 문서의
+          <code>chatLocked</code> 값을 true/false로 바꾸면 즉시 반영됩니다.
+          (다른 사람이 악용하지 못하도록 웹에서는 변경할 수 없습니다)
+        </p>
         <p class="admin-hint">차단 해제는 아래 명령을 터미널에서 실행하세요.</p>
         <code class="admin-code" id="admin-unblock-cmd"></code>
         <p class="admin-status" id="admin-status"></p>
@@ -211,6 +217,6 @@
 
   <!-- v 값은 파일을 고칠 때마다 올린다. 브라우저 캐시 때문에 HTML만 새것이고
        스크립트는 옛것인 상태가 생기지 않도록 모든 모듈에 같은 값을 붙인다. -->
-  <script type="module" src="script.js?v=24"></script>
+  <script type="module" src="script.js?v=25"></script>
 </body>
 </html>

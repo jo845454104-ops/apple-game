@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=24";
-import { findTargeted } from "./profanity.js?v=24";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=25";
+import { findTargeted } from "./profanity.js?v=25";
 import {
   getNickname,
   setNickname,
@@ -13,11 +13,12 @@ import {
   getTargetedViolation,
   fetchBlockedList,
   fetchRecentMessages,
+  fetchChatLocked,
   deleteMessages,
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=24";
+} from "./chat.js?v=25";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -756,6 +757,10 @@ function applyAdminView() {
     renderBlockedList();
     renderAdminChat();
     renderAdminScores();
+    fetchChatLocked().then((locked) => {
+      const el = document.getElementById("admin-chat-lock-state");
+      if (el) el.textContent = locked ? "🔒 잠김" : "🔓 열림";
+    });
     adminUnblockCmdEl.textContent =
       "npx firebase-tools firestore:delete blocked/<기기코드> --force --project jo8454-ea749";
   }
@@ -1002,6 +1007,24 @@ document.addEventListener("visibilitychange", () => {
 })();
 
 updateEntryGate();
+
+// 운영자가 채팅을 잠갔는지 주기적으로 확인해 입력창을 막는다
+let chatLocked = false;
+async function refreshChatLock() {
+  chatLocked = await fetchChatLocked();
+  const hasNick = !!getNickname();
+  chatInput.disabled = chatLocked || !hasNick;
+  chatSendBtn.disabled = chatLocked || !hasNick;
+  if (chatLocked) {
+    chatInput.placeholder = "운영자가 채팅을 잠갔습니다";
+    chatStatusEl.textContent = "채팅이 잠겨 있습니다.";
+  } else if (hasNick) {
+    chatInput.placeholder = "메시지 입력";
+    if (chatStatusEl.textContent === "채팅이 잠겨 있습니다.") chatStatusEl.textContent = "";
+  }
+}
+refreshChatLock();
+window.setInterval(refreshChatLock, 15000);
 
 renderNickname();
 renderScoreNameArea();
