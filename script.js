@@ -1,4 +1,4 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=7";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=8";
 import {
   getNickname,
   setNickname,
@@ -6,7 +6,7 @@ import {
   sendMessage,
   watchMessages,
   startPresence,
-} from "./chat.js?v=7";
+} from "./chat.js?v=8";
 
 const GAME_SECONDS = 120;
 const COLS = 17;

@@ -214,6 +214,8 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  /* 숫자 위에서 텍스트 커서(I빔)가 뜨지 않도록 게임판 전체를 고정한다 */
+  cursor: default;
   overflow: hidden;
 }
 
@@ -242,6 +244,7 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
+  cursor: default;
 }
 
 /* 숫자가 드래그를 가로채지 않도록 이벤트 대상에서 제외한다 */
@@ -251,6 +254,7 @@ body {
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+  cursor: default;
 }
 
 .apple-grid.is-pale .apple {
