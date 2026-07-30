@@ -33,10 +33,6 @@
         <span class="hud__label">남은 시간</span>
         <span class="hud__value" id="time">2:00</span>
       </div>
-      <div class="hud__box hud__box--online">
-        <span class="hud__label">접속자</span>
-        <span class="hud__value" id="online-count">–</span>
-      </div>
       <button type="button" class="ghost-btn" id="ranking-btn">🏆 랭킹</button>
       <button type="button" class="ghost-btn" id="reset-btn">Reset</button>
     </div>
@@ -114,6 +110,10 @@
     </div>
 
     <div class="board-footer">
+      <button type="button" class="online-chip" id="online-btn" title="접속자 목록 보기">
+        <span class="online-chip__dot"></span>
+        <span id="online-count">–</span>
+      </button>
       <button type="button" class="theme-btn" id="theme-btn" aria-label="다크모드 전환">
         <span id="theme-icon">🌙</span><span id="theme-label">다크모드</span>
       </button>
@@ -143,6 +143,25 @@
     </div>
   </div>
 
+  <div class="modal" id="online-modal" hidden>
+    <div class="modal__card">
+      <div class="modal__header">
+        <h2>🟢 접속자 목록</h2>
+        <button type="button" class="modal__close" id="online-close">&times;</button>
+      </div>
+      <div class="admin-gate" id="online-gate">
+        <p class="modal__status">운영자 확인이 필요합니다.</p>
+        <div class="name-row">
+          <input type="password" id="online-pw" placeholder="비밀번호" autocomplete="off" />
+          <button type="button" class="play-btn small" id="online-pw-btn">확인</button>
+        </div>
+        <p class="submit-status" id="online-pw-msg"></p>
+      </div>
+      <p class="modal__status" id="online-note" hidden></p>
+      <ol class="ranking-list" id="online-list" hidden></ol>
+    </div>
+  </div>
+
   <div class="modal" id="ranking-modal" hidden>
     <div class="modal__card">
       <div class="modal__header">
@@ -156,6 +175,6 @@
 
   <!-- v 값은 파일을 고칠 때마다 올린다. 브라우저 캐시 때문에 HTML만 새것이고
        스크립트는 옛것인 상태가 생기지 않도록 모든 모듈에 같은 값을 붙인다. -->
-  <script type="module" src="script.js?v=10"></script>
+  <script type="module" src="script.js?v=12"></script>
 </body>
 </html>

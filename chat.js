@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=10";
-import { isClean, findProfanity } from "./profanity.js?v=10";
+import { getFirestoreApi } from "./firebase-app.js?v=12";
+import { isClean, findProfanity } from "./profanity.js?v=12";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -201,7 +201,13 @@ export async function startPresence(onCount) {
 
   const beat = async () => {
     try {
-      await api.setDoc(ref, { clients: { [clientId]: Date.now() } }, { merge: true });
+      // 접속자 목록에 이름을 띄우기 위해 닉네임도 함께 보낸다
+      const nick = getNickname();
+      await api.setDoc(
+        ref,
+        { clients: { [clientId]: { t: Date.now(), n: nick } } },
+        { merge: true }
+      );
     } catch (err) {
       console.error("접속 신호 전송 실패", err);
     }
@@ -213,15 +219,22 @@ export async function startPresence(onCount) {
       const clients = snap.exists() ? snap.data().clients || {} : {};
       const now = Date.now();
       const stale = [];
-      let count = 0;
+      const online = [];
 
-      Object.entries(clients).forEach(([id, ts]) => {
+      Object.entries(clients).forEach(([id, value]) => {
+        // 예전 형식은 값이 숫자 하나였다
+        const ts = typeof value === "object" && value !== null ? value.t : value;
+        const nick = typeof value === "object" && value !== null ? value.n : "";
         const age = now - Number(ts);
-        if (age < ONLINE_WINDOW_MS) count += 1;
-        else if (age > STALE_MS) stale.push(id);
+        if (age < ONLINE_WINDOW_MS) {
+          online.push({ id, name: nick || "", isMe: id === clientId });
+        } else if (age > STALE_MS) {
+          stale.push(id);
+        }
       });
 
-      onCount(Math.max(count, 1));
+      online.sort((a, b) => (a.isMe ? -1 : b.isMe ? 1 : a.name.localeCompare(b.name)));
+      onCount(Math.max(online.length, 1), online);
 
       if (stale.length) {
         const updates = {};

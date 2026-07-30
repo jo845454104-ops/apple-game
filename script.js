@@ -1,4 +1,4 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=10";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=12";
 import {
   getNickname,
   setNickname,
@@ -9,7 +9,7 @@ import {
   startPresence,
   reportCheat,
   isBlockedOnServer,
-} from "./chat.js?v=10";
+} from "./chat.js?v=12";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -536,6 +536,98 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 renderThemeButton();
 
 const onlineCountEl = document.getElementById("online-count");
+const onlineBtn = document.getElementById("online-btn");
+const onlineModal = document.getElementById("online-modal");
+const onlineClose = document.getElementById("online-close");
+const onlineListEl = document.getElementById("online-list");
+const onlineNoteEl = document.getElementById("online-note");
+
+const onlineGateEl = document.getElementById("online-gate");
+const onlinePwInput = document.getElementById("online-pw");
+const onlinePwBtn = document.getElementById("online-pw-btn");
+const onlinePwMsg = document.getElementById("online-pw-msg");
+
+// 비밀번호 자체는 코드에 없고 SHA-256 해시만 둔다.
+const ADMIN_HASH =
+  "8d02a502793c9e16ae89bb936b24bc6f91987ca412e77a233e6ca7ebc32b491f";
+const ADMIN_KEY = "apple-game-admin";
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function isAdmin() {
+  try {
+    return sessionStorage.getItem(ADMIN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function applyAdminView() {
+  const ok = isAdmin();
+  onlineGateEl.hidden = ok;
+  onlineNoteEl.hidden = !ok;
+  onlineListEl.hidden = !ok;
+  if (ok) renderOnlineList();
+}
+
+async function checkAdminPassword() {
+  const value = onlinePwInput.value;
+  if (!value) {
+    onlinePwMsg.textContent = "비밀번호를 입력하세요.";
+    return;
+  }
+  const hash = await sha256(value);
+  if (hash !== ADMIN_HASH) {
+    onlinePwMsg.textContent = "비밀번호가 올바르지 않습니다.";
+    return;
+  }
+  try {
+    sessionStorage.setItem(ADMIN_KEY, "1");
+  } catch {
+    /* 저장이 막혀 있어도 이번 창에서는 열린다 */
+  }
+  onlinePwInput.value = "";
+  onlinePwMsg.textContent = "";
+  applyAdminView();
+}
+
+let onlineUsers = [];
+
+function renderOnlineList() {
+  onlineNoteEl.textContent = `현재 ${onlineUsers.length}명 접속 중 · 15초마다 갱신`;
+  if (onlineUsers.length === 0) {
+    onlineListEl.innerHTML = '<li class="ranking-empty">접속자를 불러오는 중입니다.</li>';
+    return;
+  }
+  onlineListEl.innerHTML = onlineUsers
+    .map((u, i) => {
+      const name = u.name
+        ? escapeHtml(u.name)
+        : '<span class="online-list__anon">닉네임 미설정</span>';
+      const me = u.isMe ? '<span class="online-list__me">나</span>' : "";
+      return `<li><span class="rank">${i + 1}</span><span class="name">${name}</span>${me}</li>`;
+    })
+    .join("");
+}
+
+onlineBtn.addEventListener("click", () => {
+  onlineModal.hidden = false;
+  applyAdminView();
+});
+
+onlinePwBtn.addEventListener("click", checkAdminPassword);
+onlinePwInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") checkAdminPassword();
+});
+onlineClose.addEventListener("click", () => {
+  onlineModal.hidden = true;
+});
+onlineModal.addEventListener("click", (e) => {
+  if (e.target === onlineModal) onlineModal.hidden = true;
+});
 const nickLabelEl = document.getElementById("nick-label");
 const nickSetupEl = document.getElementById("nick-setup");
 const nickInput = document.getElementById("nick-input");
@@ -644,8 +736,10 @@ isBlockedOnServer().then((serverReason) => {
 renderNickname();
 renderScoreNameArea();
 watchMessages(renderMessages);
-startPresence((count) => {
+startPresence((count, users) => {
   onlineCountEl.textContent = count === null ? "–" : `${count}명`;
+  onlineUsers = users ?? [];
+  if (!onlineModal.hidden && isAdmin()) renderOnlineList();
 });
 
 buildGrid();
