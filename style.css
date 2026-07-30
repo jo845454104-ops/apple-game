@@ -1185,3 +1185,16 @@ body {
 .modal__card {
   overflow-y: auto;
 }
+
+#admin-score-list li.is-odd {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--apple-red);
+}
+
+.score-flag {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--apple-red);
+  margin-top: 2px;
+}

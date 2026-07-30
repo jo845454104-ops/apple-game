@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=25";
-import { getClientId } from "./chat.js?v=25";
+import { getFirestoreApi } from "./firebase-app.js?v=27";
+import { getClientId } from "./chat.js?v=27";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
@@ -65,9 +65,9 @@ function fetchLocalTopScores() {
 export function checkPlausible({ score, clears, durationMs }) {
   if (!Number.isInteger(score) || score < 0 || score > 170) return "점수 범위 오류";
   if (!Number.isInteger(clears) || clears < 0) return "매칭 횟수 오류";
-  if (score > 0 && (clears * 2 > score || clears * 4 < score)) return "매칭 기록 불일치";
+  if (score > 0 && (clears * 2 > score || clears * 3 < score)) return "매칭 기록 불일치";
   if (!Number.isFinite(durationMs) || durationMs > 125000) return "플레이 시간 오류";
-  if (durationMs < score * 350) return "플레이 시간이 점수에 비해 너무 짧습니다";
+  if (durationMs < score * 700) return "플레이 시간이 점수에 비해 너무 짧습니다";
   return null;
 }
 
@@ -93,6 +93,24 @@ export async function submitScore(name, score, meta = {}) {
   }
   submitLocalScore(name.slice(0, 12), score);
   return { online: false };
+}
+
+// 운영자용: 문서 ID까지 포함해 가져온다 (삭제 명령 생성에 필요)
+export async function fetchScoresForAdmin(limit = 50) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return [];
+  const { db, api } = ctx;
+  const snap = await api.getDocs(
+    api.query(
+      api.collection(db, COLLECTION_NAME),
+      api.where("createdAt", ">=", api.Timestamp.fromDate(getResetCutoff())),
+      api.orderBy("createdAt", "desc"),
+      api.limit(limit)
+    )
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => b.score - a.score);
 }
 
 export async function fetchTopScores() {

@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=25";
-import { findTargeted } from "./profanity.js?v=25";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=27";
+import { findTargeted } from "./profanity.js?v=27";
 import {
   getNickname,
   setNickname,
@@ -18,7 +18,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=25";
+} from "./chat.js?v=27";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -695,22 +695,48 @@ async function renderAdminChat() {
 
 async function renderAdminScores() {
   adminScoreListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
-  const { scores } = await fetchTopScores();
-  if (!scores || scores.length === 0) {
+  const scores = await fetchScoresForAdmin(50);
+  if (scores.length === 0) {
     adminScoreListEl.innerHTML = '<li class="ranking-empty">기록이 없습니다.</li>';
     return;
   }
+  // 실측 정상 범위는 매칭당 2.1~2.5개, 초당 0.86~0.99개다.
+  // 이를 벗어나면 규칙은 통과했더라도 눈에 띄게 표시한다.
   adminScoreListEl.innerHTML = scores
-    .map(
-      (s, i) => `<li>
+    .map((s, i) => {
+      const sec = (s.durationMs || 0) / 1000;
+      const perMatch = s.clears ? s.score / s.clears : 0;
+      const perSec = sec ? s.score / sec : 0;
+      const odd = perMatch > 2.6 || perSec > 1.1;
+      const flag = odd
+        ? `<span class="score-flag">의심 · 매칭당 ${perMatch.toFixed(2)} · 초당 ${perSec.toFixed(2)}</span>`
+        : "";
+      return `<li class="${odd ? "is-odd" : ""}">
         <span class="rank">${i + 1}</span>
         <span class="name">${escapeHtml(s.name || "?")}
-          <span class="online-list__code">${s.score}점 · 매칭 ${s.clears ?? "?"}회 · ${Math.round((s.durationMs || 0) / 1000)}초</span>
+          <span class="online-list__code">${s.score}점 · 매칭 ${s.clears ?? "?"}회 · ${Math.round(sec)}초</span>
+          ${flag}
         </span>
-      </li>`
-    )
+        <button type="button" class="block-btn" data-score="${escapeHtml(s.id)}">삭제</button>
+      </li>`;
+    })
     .join("");
 }
+
+// 점수 삭제는 웹에서 직접 하지 않는다. 권한을 열면 누구나 랭킹을 지울 수 있기 때문이다.
+// 대신 운영자가 터미널에 붙여넣을 명령을 만들어 클립보드에 복사한다.
+adminScoreListEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-score]");
+  if (!btn || !isAdmin()) return;
+  const cmd = `npx firebase-tools firestore:delete scores/${btn.dataset.score} --force --project jo8454-ea749`;
+  try {
+    await navigator.clipboard.writeText(cmd);
+    adminStatusEl.textContent = "삭제 명령을 복사했습니다. 터미널에 붙여넣어 실행하세요.";
+  } catch {
+    adminStatusEl.textContent = cmd;
+  }
+  adminUnblockCmdEl.textContent = cmd;
+});
 
 adminChatListEl.addEventListener("click", async (e) => {
   const btn = e.target.closest("[data-msg]");

@@ -52,13 +52,13 @@ service cloud.firestore {
         && request.resource.data.clears >= 0
         // 한 번에 지우는 사과는 최소 2개다
         && request.resource.data.clears * 2 <= request.resource.data.score
-        // 실제 플레이는 매칭당 2~3개 수준이다. 매칭당 10개(1이 열 개)를 연속으로
-        // 잡았다고 주장하는 조작을 막기 위해 매칭당 4개로 제한한다
-        && request.resource.data.clears * 4 >= request.resource.data.score
+        // 실측 정상 기록은 매칭당 2.13~2.45개다. 여유를 두고 3개로 제한한다.
+        && request.resource.data.clears * 3 >= request.resource.data.score
         && request.resource.data.durationMs is number
         && request.resource.data.durationMs <= 125000
-        // 사과 한 개당 최소 0.35초. 만점이면 최소 59.5초가 필요하다
-        && request.resource.data.durationMs >= request.resource.data.score * 350
+        // 실측 정상 속도는 초당 0.86~0.99개(사과당 1.0초 이상)다.
+        // 여유를 둬 사과당 0.7초로 잡으면 만점은 최소 119초가 필요하다.
+        && request.resource.data.durationMs >= request.resource.data.score * 700
         // 클라이언트가 임의의 시각을 써 넣지 못하도록 서버 시각만 허용한다
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
