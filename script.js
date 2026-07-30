@@ -1,4 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=12";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=14";
+import { findTargeted } from "./profanity.js?v=14";
 import {
   getNickname,
   setNickname,
@@ -9,7 +10,10 @@ import {
   startPresence,
   reportCheat,
   isBlockedOnServer,
-} from "./chat.js?v=12";
+  getTargetedViolation,
+  fetchBlockedList,
+  blockClient,
+} from "./chat.js?v=14";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -310,6 +314,11 @@ async function handleSubmitScore() {
   let name = getNickname();
   if (!name) {
     const typed = playerNameInput.value.trim();
+    const targetedTry = findTargeted(typed);
+    if (targetedTry) {
+      lockOut(`금지된 닉네임 시도 (${targetedTry})`);
+      return;
+    }
     const nickProblem = checkNickname(typed);
     if (nickProblem) {
       submitStatusEl.textContent = nickProblem;
@@ -565,12 +574,43 @@ function isAdmin() {
   }
 }
 
+const blockedSectionEl = document.getElementById("blocked-section");
+const blockedListEl = document.getElementById("blocked-list");
+
+async function renderBlockedList() {
+  blockedListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
+  try {
+    const list = await fetchBlockedList();
+    if (list.length === 0) {
+      blockedListEl.innerHTML = '<li class="ranking-empty">차단된 기기가 없습니다.</li>';
+      return;
+    }
+    blockedListEl.innerHTML = list
+      .map(
+        (b, i) => `<li>
+          <span class="rank">${i + 1}</span>
+          <span class="name">${escapeHtml(b.name || "(닉네임 없음)")}
+            <span class="blocked-item__reason">${escapeHtml(b.reason || "")}</span>
+          </span>
+        </li>`
+      )
+      .join("");
+  } catch (err) {
+    console.error(err);
+    blockedListEl.innerHTML = '<li class="ranking-empty">불러오지 못했습니다.</li>';
+  }
+}
+
 function applyAdminView() {
   const ok = isAdmin();
   onlineGateEl.hidden = ok;
   onlineNoteEl.hidden = !ok;
   onlineListEl.hidden = !ok;
-  if (ok) renderOnlineList();
+  blockedSectionEl.hidden = !ok;
+  if (ok) {
+    renderOnlineList();
+    renderBlockedList();
+  }
 }
 
 async function checkAdminPassword() {
@@ -608,7 +648,10 @@ function renderOnlineList() {
         ? escapeHtml(u.name)
         : '<span class="online-list__anon">닉네임 미설정</span>';
       const me = u.isMe ? '<span class="online-list__me">나</span>' : "";
-      return `<li><span class="rank">${i + 1}</span><span class="name">${name}</span>${me}</li>`;
+      const btn = u.isMe
+        ? ""
+        : `<button type="button" class="block-btn" data-id="${escapeHtml(u.id)}" data-name="${escapeHtml(u.name)}">차단</button>`;
+      return `<li><span class="rank">${i + 1}</span><span class="name">${name}</span>${me}${btn}</li>`;
     })
     .join("");
 }
@@ -616,6 +659,24 @@ function renderOnlineList() {
 onlineBtn.addEventListener("click", () => {
   onlineModal.hidden = false;
   applyAdminView();
+});
+
+onlineListEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".block-btn");
+  if (!btn || !isAdmin()) return;
+  const id = btn.dataset.id;
+  const name = btn.dataset.name;
+  btn.disabled = true;
+  btn.textContent = "차단 중";
+  try {
+    await blockClient(id, name);
+    btn.textContent = "차단됨";
+    renderBlockedList();
+  } catch (err) {
+    console.error(err);
+    btn.textContent = "실패";
+    btn.disabled = false;
+  }
 });
 
 onlinePwBtn.addEventListener("click", checkAdminPassword);
@@ -684,6 +745,12 @@ function renderMessages(list) {
 
 function saveNicknameFromInput() {
   const value = nickInput.value.trim();
+  // 사칭·조롱 닉네임은 시도한 것만으로 이 기기를 차단한다
+  const targetedTry = findTargeted(value);
+  if (targetedTry) {
+    lockOut(`금지된 닉네임 시도 (${targetedTry})`);
+    return;
+  }
   const problem = checkNickname(value);
   if (problem) {
     chatStatusEl.textContent = problem;
@@ -726,6 +793,12 @@ const blockedReason = isBlocked();
 if (blockedReason) {
   lockoutReasonEl.textContent = `사유: ${blockedReason}`;
   lockoutEl.hidden = false;
+}
+
+// 특정인을 사칭·조롱하는 닉네임을 쓰던 기기는 접속 자체를 막는다
+const targeted = getTargetedViolation();
+if (targeted) {
+  lockOut(`사용이 금지된 닉네임 사용 (${targeted})`);
 }
 
 // 브라우저 저장소를 지우고 다시 들어와도 서버 기록으로 다시 막는다

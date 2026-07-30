@@ -4,7 +4,7 @@ service cloud.firestore {
 
     // 닉네임 금지어. profanity.js의 목록과 같은 내용을 유지할 것.
     function cleanName(name) {
-      return !name.lower().matches('.*(시발|씨발|시바|씨바|쉬발|쒸발|시팔|씨팔|십알|병신|븅신|빙신|등신|좆|좇|존나|졸라|존만|지랄|니미|애미|애비|느금|새끼|쌔끼|새기|개새|개년|개놈|썅|쌍놈|쌍년|미친놈|미친년|또라이|돌아이|보지|자지|꼬추|섹스|야동|강간|젖탱|게이|레즈|호모|트젠|장애인|찐따|일베|틀딱|급식충|맘충|한남|김치녀|자살|꺼져|fuck|shit|bitch|asshole|dick|pussy|gay|fag).*');
+      return !name.lower().matches('.*(시발|씨발|시바|씨바|쉬발|쒸발|시팔|씨팔|십알|병신|븅신|빙신|등신|좆|좇|존나|졸라|존만|지랄|니미|애미|애비|느금|새끼|쌔끼|새기|개새|개년|개놈|썅|쌍놈|쌍년|미친놈|미친년|또라이|돌아이|보지|자지|꼬추|섹스|야동|강간|젖탱|게이|레즈|호모|트젠|장애인|찐따|일베|틀딱|급식충|맘충|한남|김치녀|자살|꺼져|fuck|shit|bitch|asshole|dick|pussy|gay|fag|정식).*');
     }
     // 점수 기록은 등록만 가능하고 이후 수정·삭제가 불가능하다.
     // 브라우저에서 함수를 직접 호출하더라도 아래 조건을 만족하지 못하면 거부된다.
@@ -44,7 +44,7 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 200
-        && request.resource.data.keys().hasOnly(['name', 'text', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'text', 'cid', 'createdAt'])
         && request.resource.data.createdAt == request.time;
       allow update: if false;
       // 2시간이 지났거나 100개를 넘긴 대화를 오래된 것부터 정리한다.

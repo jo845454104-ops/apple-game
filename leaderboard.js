@@ -1,4 +1,4 @@
-import { getFirestoreApi } from "./firebase-app.js?v=12";
+import { getFirestoreApi } from "./firebase-app.js?v=14";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";

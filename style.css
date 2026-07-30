@@ -1001,3 +1001,35 @@ body {
 #online-list[hidden] {
   display: none;
 }
+
+.admin-subtitle {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 16px 0 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--slate-200);
+}
+
+.blocked-item__reason {
+  font-size: 11px;
+  color: var(--slate-400);
+}
+
+.block-btn {
+  appearance: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--apple-red);
+  border: none;
+  border-radius: 8px;
+}
+
+.block-btn:disabled {
+  background: var(--slate-400);
+  cursor: default;
+}

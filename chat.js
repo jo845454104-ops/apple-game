@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=12";
-import { isClean, findProfanity } from "./profanity.js?v=12";
+import { getFirestoreApi } from "./firebase-app.js?v=14";
+import { isClean, findProfanity, findTargeted } from "./profanity.js?v=14";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -34,6 +34,15 @@ function loadClientId() {
 
 const clientId = loadClientId();
 
+// 저장된 닉네임이 사칭·조롱용이면 그 단어를 돌려준다 (차단 판단용)
+export function getTargetedViolation() {
+  try {
+    return findTargeted(localStorage.getItem(NICK_KEY) || "");
+  } catch {
+    return null;
+  }
+}
+
 export function getClientId() {
   return clientId;
 }
@@ -53,6 +62,28 @@ export async function reportCheat(reason, name) {
   } catch (err) {
     console.error("차단 기록 실패", err);
   }
+}
+
+// 운영자가 접속자 목록에서 특정 기기를 즉시 차단한다.
+export async function blockClient(targetId, name) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) throw new Error("서버에 연결되어 있지 않습니다.");
+  const { db, api } = ctx;
+  await api.setDoc(api.doc(db, "blocked", targetId), {
+    reason: "운영자 차단",
+    name: String(name || "").slice(0, 12),
+    createdAt: api.serverTimestamp(),
+  });
+}
+
+export async function fetchBlockedList() {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return [];
+  const { db, api } = ctx;
+  const snap = await api.getDocs(
+    api.query(api.collection(db, "blocked"), api.limit(100))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
 export async function isBlockedOnServer() {
@@ -113,6 +144,8 @@ export async function sendMessage(nickname, text) {
   await api.addDoc(api.collection(db, MESSAGES), {
     name: nickname.trim().slice(0, 12),
     text: text.trim().slice(0, 200),
+    // 문제가 된 발언의 작성 기기를 찾아 차단할 수 있도록 남긴다
+    cid: clientId,
     createdAt: api.serverTimestamp(),
   });
 }
