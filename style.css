@@ -212,6 +212,8 @@ body {
   padding: 12px;
   touch-action: none;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   overflow: hidden;
 }
 
@@ -237,11 +239,18 @@ body {
   background-position: center;
   filter: drop-shadow(0 2px 2px rgba(15, 23, 42, 0.18));
   transition: transform 0.12s ease, opacity 0.25s ease, filter 0.12s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
+/* 숫자가 드래그를 가로채지 않도록 이벤트 대상에서 제외한다 */
 .apple span {
   transform: translateY(12%);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .apple-grid.is-pale .apple {

@@ -1,4 +1,4 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=6";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=7";
 import {
   getNickname,
   setNickname,
@@ -6,7 +6,7 @@ import {
   sendMessage,
   watchMessages,
   startPresence,
-} from "./chat.js?v=6";
+} from "./chat.js?v=7";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -199,6 +199,8 @@ function relativePoint(e) {
 
 function handlePointerDown(e) {
   if (!playing) return;
+  // 막지 않으면 사과의 숫자를 텍스트로 잡아 끄는 동작이 끼어든다
+  e.preventDefault();
   const p = relativePoint(e);
   isSelecting = true;
   startX = p.x;
@@ -422,6 +424,9 @@ function stopBgm() {
 }
 
 boardEl.addEventListener("pointerdown", handlePointerDown);
+// 드래그 도중 숫자가 텍스트로 선택되는 것을 막는다
+boardEl.addEventListener("selectstart", (e) => e.preventDefault());
+boardEl.addEventListener("dragstart", (e) => e.preventDefault());
 window.addEventListener("pointermove", handlePointerMove);
 window.addEventListener("pointerup", handlePointerUp);
 
