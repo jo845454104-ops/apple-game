@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=20";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=20";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=20";
+import { getFirestoreApi } from "./firebase-app.js?v=22";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=22";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=22";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -169,6 +169,32 @@ export async function blockClient(targetId, name, fingerprint, hardware) {
   );
 }
 
+// 운영자용: 최근 채팅을 가져온다 (삭제 대상 선택용)
+export async function fetchRecentMessages(limit = 40) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return [];
+  const { db, api } = ctx;
+  const snap = await api.getDocs(
+    api.query(api.collection(db, MESSAGES), api.orderBy("createdAt", "desc"), api.limit(limit))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// 운영자용: 조건에 맞는 채팅을 지운다. 올라온 지 2분이 안 된 글은 규칙상 남는다.
+export async function deleteMessages(ids) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return { ok: 0, fail: 0 };
+  const { db, api } = ctx;
+  let ok = 0;
+  let fail = 0;
+  await Promise.all(
+    ids.map((id) =>
+      api.deleteDoc(api.doc(db, MESSAGES, id)).then(() => ok++).catch(() => fail++)
+    )
+  );
+  return { ok, fail };
+}
+
 export async function fetchBlockedList() {
   const ctx = await getFirestoreApi();
   if (!ctx) return [];
@@ -286,6 +312,8 @@ export async function sendMessage(nickname, text) {
     text: text.trim().slice(0, 200),
     // 문제가 된 발언의 작성 기기를 찾아 차단할 수 있도록 남긴다
     cid: clientId,
+    // 서버가 닉네임 소유권을 확인할 수 있도록 예약 키를 함께 보낸다
+    nk: nicknameKey(nickname),
     createdAt: api.serverTimestamp(),
   });
 }

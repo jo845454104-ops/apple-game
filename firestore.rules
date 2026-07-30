@@ -3,6 +3,19 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 닉네임 금지어. profanity.js의 목록과 같은 내용을 유지할 것.
+    // 차단된 기기인지 서버에서 직접 확인한다.
+    // 예전 버전 페이지를 열어둔 채 쓰더라도 여기서 걸린다.
+    function notBlocked(cid) {
+      return !exists(/databases/$(database)/documents/blocked/$(cid));
+    }
+
+    // 닉네임을 정식으로 예약한 기기만 활동할 수 있다.
+    // 화면(닉네임 입력창)을 건너뛰어도 서버에서 걸린다.
+    function ownsNickname(nick, cid) {
+      let key = /databases/$(database)/documents/nicknames/$(nick);
+      return exists(key) && get(key).data.owner == cid;
+    }
+
     function cleanName(name) {
       return !name.lower().matches('.*(시발|씨발|시바|씨바|쉬발|쒸발|시팔|씨팔|십알|병신|븅신|빙신|등신|좆|좇|존나|졸라|존만|지랄|니미|애미|애비|느금|새끼|쌔끼|새기|개새|개년|개놈|썅|쌍놈|쌍년|미친놈|미친년|또라이|돌아이|보지|자지|꼬추|섹스|야동|강간|젖탱|게이|레즈|호모|트젠|장애인|찐따|일베|틀딱|급식충|맘충|한남|김치녀|자살|꺼져|fuck|shit|bitch|asshole|dick|pussy|gay|fag|정식).*');
     }
@@ -11,8 +24,11 @@ service cloud.firestore {
     match /scores/{doc} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasOnly(
-          ['name', 'score', 'clears', 'durationMs', 'createdAt']
+          ['name', 'score', 'clears', 'durationMs', 'cid', 'createdAt']
         )
+        && request.resource.data.cid is string
+        && request.resource.data.cid.size() > 0
+        && notBlocked(request.resource.data.cid)
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 12
@@ -44,7 +60,10 @@ service cloud.firestore {
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
         && request.resource.data.text.size() <= 200
-        && request.resource.data.keys().hasOnly(['name', 'text', 'cid', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['name', 'text', 'cid', 'nk', 'createdAt'])
+        && request.resource.data.cid is string
+        && request.resource.data.cid.size() > 0
+        && notBlocked(request.resource.data.cid)
         && request.resource.data.createdAt == request.time;
       allow update: if false;
       // 2시간이 지났거나 100개를 넘긴 대화를 오래된 것부터 정리한다.

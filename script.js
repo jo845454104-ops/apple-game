@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=20";
-import { findTargeted } from "./profanity.js?v=20";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=22";
+import { findTargeted } from "./profanity.js?v=22";
 import {
   getNickname,
   setNickname,
@@ -12,10 +12,12 @@ import {
   isBlockedOnServer,
   getTargetedViolation,
   fetchBlockedList,
+  fetchRecentMessages,
+  deleteMessages,
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=20";
+} from "./chat.js?v=22";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -356,12 +358,14 @@ async function handleSubmitScore() {
       : "로컬 랭킹에 저장되었습니다 (온라인 랭킹 미설정)";
   } catch (err) {
     console.error(err);
-    // 정상 플레이로는 나올 수 없는 기록이면 조작으로 보고 잠근다.
-    const tampered =
-      err.code === "permission-denied" ||
-      /점수 범위|매칭|플레이 시간/.test(err.message ?? "");
-    if (tampered) {
-      lockOut(err.message || "서버 검증 실패");
+    // 조작 판정은 값 자체가 불가능할 때만 한다.
+    // 서버 거부(permission-denied)는 규칙 변경이나 일시적 문제로도 발생하므로
+    // 이것만으로 차단하면 정상 참가자가 잘못 밴된다.
+    const impossible = /점수 범위|매칭 기록|플레이 시간이 점수에 비해/.test(
+      err.message ?? ""
+    );
+    if (impossible) {
+      lockOut(err.message);
       return;
     }
     submitStatusEl.textContent = `등록 실패: ${err.message}`;
@@ -660,6 +664,87 @@ async function renderBlockedList() {
   }
 }
 
+const adminChatListEl = document.getElementById("admin-chat-list");
+const adminScoreListEl = document.getElementById("admin-score-list");
+const adminStatusEl = document.getElementById("admin-status");
+const adminUnblockCmdEl = document.getElementById("admin-unblock-cmd");
+const adminPurgeNameBtn = document.getElementById("admin-purge-name");
+const adminPurgeAllBtn = document.getElementById("admin-purge-all");
+
+async function renderAdminChat() {
+  adminChatListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
+  const list = await fetchRecentMessages(40);
+  if (list.length === 0) {
+    adminChatListEl.innerHTML = '<li class="ranking-empty">채팅이 없습니다.</li>';
+    return;
+  }
+  adminChatListEl.innerHTML = list
+    .map(
+      (m) => `<li>
+        <span class="name">
+          <span class="chat-name">${escapeHtml(m.name || "?")}</span>
+          ${escapeHtml((m.text || "").slice(0, 40))}
+          <span class="online-list__code">${escapeHtml(m.cid || "구버전")}</span>
+        </span>
+        <button type="button" class="block-btn" data-msg="${escapeHtml(m.id)}">삭제</button>
+      </li>`
+    )
+    .join("");
+}
+
+async function renderAdminScores() {
+  adminScoreListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
+  const { scores } = await fetchTopScores();
+  if (!scores || scores.length === 0) {
+    adminScoreListEl.innerHTML = '<li class="ranking-empty">기록이 없습니다.</li>';
+    return;
+  }
+  adminScoreListEl.innerHTML = scores
+    .map(
+      (s, i) => `<li>
+        <span class="rank">${i + 1}</span>
+        <span class="name">${escapeHtml(s.name || "?")}
+          <span class="online-list__code">${s.score}점 · 매칭 ${s.clears ?? "?"}회 · ${Math.round((s.durationMs || 0) / 1000)}초</span>
+        </span>
+      </li>`
+    )
+    .join("");
+}
+
+adminChatListEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-msg]");
+  if (!btn || !isAdmin()) return;
+  btn.disabled = true;
+  const { ok, fail } = await deleteMessages([btn.dataset.msg]);
+  adminStatusEl.textContent = ok
+    ? "삭제했습니다."
+    : "삭제 실패 (올라온 지 2분이 지나야 지울 수 있습니다).";
+  if (ok) btn.closest("li").remove();
+  else btn.disabled = false;
+});
+
+adminPurgeNameBtn.addEventListener("click", async () => {
+  if (!isAdmin()) return;
+  const name = window.prompt("삭제할 닉네임을 입력하세요 (부분 일치)");
+  if (!name) return;
+  adminStatusEl.textContent = "삭제 중...";
+  const list = await fetchRecentMessages(200);
+  const targets = list.filter((m) => (m.name || "").includes(name)).map((m) => m.id);
+  const { ok, fail } = await deleteMessages(targets);
+  adminStatusEl.textContent = `${ok}건 삭제${fail ? ` · ${fail}건은 2분 미만이라 남음` : ""}`;
+  renderAdminChat();
+});
+
+adminPurgeAllBtn.addEventListener("click", async () => {
+  if (!isAdmin()) return;
+  if (!window.confirm("채팅을 전부 삭제할까요? 되돌릴 수 없습니다.")) return;
+  adminStatusEl.textContent = "삭제 중...";
+  const list = await fetchRecentMessages(200);
+  const { ok, fail } = await deleteMessages(list.map((m) => m.id));
+  adminStatusEl.textContent = `${ok}건 삭제${fail ? ` · ${fail}건은 2분 미만이라 남음` : ""}`;
+  renderAdminChat();
+});
+
 function applyAdminView() {
   const ok = isAdmin();
   onlineGateEl.hidden = ok;
@@ -669,6 +754,10 @@ function applyAdminView() {
   if (ok) {
     renderOnlineList();
     renderBlockedList();
+    renderAdminChat();
+    renderAdminScores();
+    adminUnblockCmdEl.textContent =
+      "npx firebase-tools firestore:delete blocked/<기기코드> --force --project jo8454-ea749";
   }
 }
 

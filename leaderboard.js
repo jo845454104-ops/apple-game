@@ -1,4 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=20";
+import { getFirestoreApi } from "./firebase-app.js?v=22";
+import { getClientId } from "./chat.js?v=22";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
@@ -85,6 +86,7 @@ export async function submitScore(name, score, meta = {}) {
       score,
       clears,
       durationMs,
+      cid: getClientId(),
       createdAt: api.serverTimestamp(),
     });
     return { online: true };
