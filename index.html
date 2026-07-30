@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>🍎 사과게임 - DSA 아카데미</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=30" />
+  <link rel="stylesheet" href="style.css?v=31" />
   <script>
     // 스타일이 적용되기 전에 테마를 정해 화면이 번쩍이는 것을 막는다.
     try {
@@ -23,6 +23,11 @@
       <h1 class="title">🍎 사과게임</h1>
       <p class="subtitle">드래그해서 합이 10이 되는 사과를 터뜨리세요!</p>
     </header>
+
+    <div class="prize-ticker" id="prize-ticker" hidden>
+      <span class="prize-ticker__label">🎉 당첨</span>
+      <div class="prize-ticker__track" id="prize-ticker-track"></div>
+    </div>
 
     <div class="hud">
       <div class="hud__box">
@@ -133,6 +138,33 @@
     <p class="footer-note">* DSA 아카데미 사과게임 대회용 미니게임입니다 :)</p>
   </div>
 
+  <div class="roulette" id="roulette" hidden>
+    <div class="roulette__card">
+      <p class="roulette__congrats" id="roulette-congrats">🎊 100점 돌파 축하합니다!</p>
+      <p class="roulette__sub" id="roulette-sub">룰렛을 돌려 경품에 도전하세요</p>
+
+      <div class="wheel-wrap">
+        <div class="wheel-pin"></div>
+        <div class="wheel" id="wheel"></div>
+      </div>
+
+      <p class="roulette__result" id="roulette-result"></p>
+
+      <div class="roulette__actions">
+        <button type="button" class="play-btn" id="roulette-spin">돌리기</button>
+        <button type="button" class="play-btn small" id="roulette-close" hidden>닫기</button>
+      </div>
+
+      <ul class="roulette__odds">
+        <li><span>🍱 식사권</span><span>0.01%</span></li>
+        <li><span>☕ 커피</span><span>3%</span></li>
+        <li><span>💕 정식이와 데이트권</span><span>5%</span></li>
+        <li><span>👉 정식 딱밤</span><span>20%</span></li>
+        <li><span>💨 꽝</span><span>나머지</span></li>
+      </ul>
+    </div>
+  </div>
+
   <div class="entry-gate" id="entry-gate" hidden>
     <div class="entry-gate__card">
       <p class="entry-gate__icon">🍎</p>
@@ -220,6 +252,6 @@
 
   <!-- v 값은 파일을 고칠 때마다 올린다. 브라우저 캐시 때문에 HTML만 새것이고
        스크립트는 옛것인 상태가 생기지 않도록 모든 모듈에 같은 값을 붙인다. -->
-  <script type="module" src="script.js?v=30"></script>
+  <script type="module" src="script.js?v=31"></script>
 </body>
 </html>

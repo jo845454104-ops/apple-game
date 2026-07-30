@@ -1211,3 +1211,157 @@ body {
 .apple-grid.is-green .apple.is-selecting.is-match {
   filter: brightness(1.2) saturate(1.3) drop-shadow(0 0 12px rgba(255, 193, 7, 0.95));
 }
+
+/* ── 당첨 로그 띠 ───────────────────────────── */
+.prize-ticker {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent-soft);
+  border: 1px solid var(--slate-200);
+  border-radius: 999px;
+  padding: 6px 14px;
+  overflow: hidden;
+}
+
+.prize-ticker[hidden] {
+  display: none;
+}
+
+.prize-ticker__label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.prize-ticker__track {
+  display: flex;
+  gap: 22px;
+  font-size: 12px;
+  color: var(--slate-600);
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.prize-ticker__track::-webkit-scrollbar {
+  display: none;
+}
+
+.prize-ticker__track b {
+  color: var(--slate-900);
+}
+
+.prize-ticker__track .win {
+  color: var(--apple-red);
+  font-weight: 700;
+}
+
+/* ── 룰렛 ───────────────────────────────────── */
+.roulette {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+.roulette[hidden] {
+  display: none;
+}
+
+.roulette__card {
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 26px 28px;
+  text-align: center;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.roulette__congrats {
+  font-size: 19px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.roulette__sub {
+  font-size: 12px;
+  color: var(--slate-400);
+  margin-bottom: 16px;
+}
+
+.wheel-wrap {
+  position: relative;
+  width: 210px;
+  height: 210px;
+  margin: 0 auto 16px;
+}
+
+.wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 6px solid var(--surface);
+  box-shadow: 0 0 0 3px var(--slate-200), 0 10px 24px rgba(0, 0, 0, 0.25);
+  transition: transform 4s cubic-bezier(0.15, 0.9, 0.2, 1);
+}
+
+.wheel-pin {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 20px solid var(--apple-red);
+  z-index: 2;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+}
+
+.roulette__result {
+  min-height: 44px;
+  font-size: 17px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.roulette__result.is-win {
+  color: var(--apple-red);
+}
+
+.roulette__result.is-lose {
+  color: var(--slate-400);
+}
+
+.roulette__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.roulette__odds {
+  list-style: none;
+  border-top: 1px solid var(--slate-200);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.roulette__odds li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--slate-400);
+}

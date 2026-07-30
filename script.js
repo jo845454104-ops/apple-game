@@ -1,5 +1,12 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=30";
-import { findTargeted } from "./profanity.js?v=30";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=31";
+import { findTargeted } from "./profanity.js?v=31";
+import {
+  ROULETTE_MIN_SCORE,
+  segments,
+  drawPrize,
+  recordPrize,
+  watchPrizes,
+} from "./roulette.js?v=31";
 import {
   getNickname,
   setNickname,
@@ -18,7 +25,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=30";
+} from "./chat.js?v=31";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -306,6 +313,11 @@ function endGame(cleared) {
   finalScoreEl.textContent = score;
   renderScoreNameArea();
   endOverlay.hidden = false;
+
+  // 100점을 넘기면 룰렛 기회를 준다
+  if (score >= ROULETTE_MIN_SCORE && getNickname()) {
+    window.setTimeout(() => openRoulette(score), 600);
+  }
 }
 
 // 채팅 닉네임과 랭킹 이름을 하나로 쓴다. 이미 정해둔 닉네임이 있으면 그대로 사용한다.
@@ -637,6 +649,94 @@ entryNickBtn.addEventListener("click", saveEntryNickname);
 entryNickInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") saveEntryNickname();
 });
+
+// ── 룰렛 ───────────────────────────────────
+const rouletteEl = document.getElementById("roulette");
+const wheelEl = document.getElementById("wheel");
+const rouletteResultEl = document.getElementById("roulette-result");
+const rouletteSpinBtn = document.getElementById("roulette-spin");
+const rouletteCloseBtn = document.getElementById("roulette-close");
+const rouletteCongratsEl = document.getElementById("roulette-congrats");
+const tickerEl = document.getElementById("prize-ticker");
+const tickerTrackEl = document.getElementById("prize-ticker-track");
+
+const SEGMENTS = segments();
+let rouletteScore = 0;
+let spinning = false;
+let wheelAngle = 0;
+
+// 원판을 확률 구간대로 색칠한다
+wheelEl.style.background = `conic-gradient(${SEGMENTS.map(
+  (s) => `${s.color} ${s.start}deg ${s.end}deg`
+).join(", ")})`;
+
+function openRoulette(score) {
+  rouletteScore = score;
+  spinning = false;
+  wheelAngle = 0;
+  wheelEl.style.transition = "none";
+  wheelEl.style.transform = "rotate(0deg)";
+  rouletteResultEl.textContent = "";
+  rouletteResultEl.className = "roulette__result";
+  rouletteCongratsEl.textContent = `🎊 ${score}점 달성! 축하합니다`;
+  rouletteSpinBtn.hidden = false;
+  rouletteSpinBtn.disabled = false;
+  rouletteCloseBtn.hidden = true;
+  rouletteEl.hidden = false;
+}
+
+rouletteSpinBtn.addEventListener("click", async () => {
+  if (spinning) return;
+  spinning = true;
+  rouletteSpinBtn.disabled = true;
+
+  const prize = drawPrize();
+  const seg = SEGMENTS.find((s) => s.id === prize.id);
+  // 바늘(위쪽)이 당첨 구간 한가운데에 오도록 회전각을 맞춘다
+  const target = seg.start + seg.angle / 2;
+  wheelAngle += 360 * 6 + (360 - target);
+
+  wheelEl.style.transition = "transform 4s cubic-bezier(0.15, 0.9, 0.2, 1)";
+  wheelEl.style.transform = `rotate(${wheelAngle}deg)`;
+
+  window.setTimeout(async () => {
+    const won = prize.id !== "none";
+    rouletteResultEl.textContent = won
+      ? `${prize.emoji} ${prize.label} 당첨!`
+      : `${prize.emoji} 꽝! 다음 기회에`;
+    rouletteResultEl.className = `roulette__result ${won ? "is-win" : "is-lose"}`;
+    rouletteCloseBtn.hidden = false;
+    spinning = false;
+
+    try {
+      await recordPrize(getNickname(), prize.label, rouletteScore);
+    } catch (err) {
+      console.error("당첨 기록 실패", err);
+    }
+  }, 4100);
+});
+
+rouletteCloseBtn.addEventListener("click", () => {
+  rouletteEl.hidden = true;
+});
+
+function renderTicker(list) {
+  if (!list || list.length === 0) {
+    tickerEl.hidden = true;
+    return;
+  }
+  tickerEl.hidden = false;
+  tickerTrackEl.innerHTML = list
+    .map((r) => {
+      const win = r.prize && r.prize !== "꽝";
+      return `<span class="${win ? "win" : ""}">
+        <b>${escapeHtml(r.name || "?")}</b>님 ${r.score}점 · ${escapeHtml(r.prize || "")} 달성했습니다
+      </span>`;
+    })
+    .join("");
+}
+
+watchPrizes(renderTicker, 20);
 
 const onlineCountEl = document.getElementById("online-count");
 const onlineBtn = document.getElementById("online-btn");
