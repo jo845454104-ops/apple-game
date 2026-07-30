@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=29";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=29";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=29";
+import { getFirestoreApi } from "./firebase-app.js?v=30";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=30";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=30";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -436,6 +436,21 @@ export async function watchMessages(onMessages) {
   );
 }
 
+let blockedCache = new Set();
+let blockedCacheAt = 0;
+
+async function refreshBlockedCache(db, api) {
+  if (Date.now() - blockedCacheAt < 30000) return blockedCache;
+  try {
+    const snap = await api.getDocs(api.query(api.collection(db, "blocked"), api.limit(200)));
+    blockedCache = new Set(snap.docs.map((d) => d.id));
+    blockedCacheAt = Date.now();
+  } catch {
+    /* 조회 실패 시 이전 목록을 그대로 쓴다 */
+  }
+  return blockedCache;
+}
+
 export async function startPresence(onCount) {
   const ctx = await getFirestoreApi();
   if (!ctx) {
@@ -469,6 +484,7 @@ export async function startPresence(onCount) {
 
   const poll = async () => {
     try {
+      const blockedSet = await refreshBlockedCache(db, api);
       const snap = await api.getDoc(ref);
       const clients = snap.exists() ? snap.data().clients || {} : {};
       const now = Date.now();
@@ -488,6 +504,11 @@ export async function startPresence(onCount) {
         const fp = typeof value === "object" && value !== null ? value.f : "";
         const hw = typeof value === "object" && value !== null ? value.h : "";
         if (!looksReal(id, ts)) {
+          stale.push(id);
+          return;
+        }
+        // 차단된 기기는 접속자 목록과 인원수에서 제외한다
+        if (blockedSet.has(id) || (fp && blockedSet.has(fp))) {
           stale.push(id);
           return;
         }
