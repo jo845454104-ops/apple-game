@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=22";
-import { findTargeted } from "./profanity.js?v=22";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=23";
+import { findTargeted } from "./profanity.js?v=23";
 import {
   getNickname,
   setNickname,
@@ -17,7 +17,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=22";
+} from "./chat.js?v=23";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -964,7 +964,20 @@ if (targeted) {
 // 이미 켜둔 창에서는 계속 플레이할 수 있으므로 주기적으로 다시 확인한다.
 async function checkBlockNow() {
   const serverReason = await isBlockedOnServer();
-  if (serverReason) lockOut(serverReason, { report: false });
+  if (serverReason) {
+    lockOut(serverReason, { report: false });
+    return;
+  }
+  // 서버에서 풀렸으면 이 기기의 잠금도 함께 푼다.
+  // 이게 없으면 운영자가 해제해도 참가자 화면은 계속 잠겨 있다.
+  if (isBlocked()) {
+    try {
+      localStorage.removeItem(CHEAT_KEY);
+    } catch {
+      /* 저장소 접근 실패 시 새로고침으로 풀린다 */
+    }
+    lockoutEl.hidden = true;
+  }
 }
 
 checkBlockNow();

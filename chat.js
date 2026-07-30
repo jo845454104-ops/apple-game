@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=22";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=22";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=22";
+import { getFirestoreApi } from "./firebase-app.js?v=23";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=23";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=23";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -140,7 +140,8 @@ export async function reportCheat(reason, name) {
   // 저장소를 지우거나 시크릿 창으로 와도 같은 기기면 지문으로 다시 걸린다
   const ids = [clientId];
   try {
-    ids.push(await getFingerprint(), await getHardwareFingerprint());
+    // 하드웨어 지문은 같은 기종 PC끼리 겹쳐 무고한 사람까지 막으므로 쓰지 않는다
+    ids.push(await getFingerprint());
   } catch {
     /* 지문을 못 만들어도 기기 ID로는 남긴다 */
   }
@@ -163,7 +164,8 @@ export async function blockClient(targetId, name, fingerprint, hardware) {
     name: String(name || "").slice(0, 12),
     createdAt: api.serverTimestamp(),
   };
-  const ids = [targetId, fingerprint, hardware].filter(Boolean);
+  // hardware 지문은 동일 기종끼리 겹쳐 오폭하므로 차단에 쓰지 않는다
+  const ids = [targetId, fingerprint].filter(Boolean);
   await Promise.all(
     ids.map((id) => api.setDoc(api.doc(db, "blocked", id), payload))
   );
@@ -211,7 +213,8 @@ export async function isBlockedOnServer() {
   const { db, api } = ctx;
   const ids = [clientId];
   try {
-    ids.push(await getFingerprint(), await getHardwareFingerprint());
+    // 하드웨어 지문은 실습실처럼 같은 기종이 많은 환경에서 겹치므로 확인에서 제외한다
+    ids.push(await getFingerprint());
   } catch {
     /* 지문 실패 시 기기 ID로만 확인한다 */
   }
