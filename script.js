@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=16";
-import { findTargeted } from "./profanity.js?v=16";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=17";
+import { findTargeted } from "./profanity.js?v=17";
 import {
   getNickname,
   setNickname,
@@ -15,7 +15,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=16";
+} from "./chat.js?v=17";
 
 const GAME_SECONDS = 120;
 const COLS = 17;

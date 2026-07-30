@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=16";
-import { isClean, findProfanity, findTargeted } from "./profanity.js?v=16";
-import { getFingerprint } from "./fingerprint.js?v=16";
+import { getFirestoreApi } from "./firebase-app.js?v=17";
+import { isClean, findProfanity, findTargeted } from "./profanity.js?v=17";
+import { getFingerprint } from "./fingerprint.js?v=17";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -20,20 +20,98 @@ const STALE_MS = 15 * 60 * 1000;
 
 // 새로고침할 때마다 새 ID를 만들면 같은 사람이 여러 명으로 집계된다.
 // 브라우저에 저장해두고 계속 같은 ID를 쓴다.
-function loadClientId() {
+// 저장 위치를 여러 곳에 두어, 한 곳을 지워도 나머지에서 되살린다.
+function readAnyStore() {
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      const v = store.getItem(CLIENT_ID_KEY);
+      if (v) return v;
+    } catch {
+      /* 접근이 막힌 저장소는 건너뛴다 */
+    }
+  }
   try {
-    const saved = localStorage.getItem(CLIENT_ID_KEY);
-    if (saved) return saved;
-    const fresh =
-      Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-    localStorage.setItem(CLIENT_ID_KEY, fresh);
-    return fresh;
+    const m = document.cookie.match(/(?:^|;\s*)agid=([^;]+)/);
+    if (m) return decodeURIComponent(m[1]);
   } catch {
-    return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    /* 쿠키를 못 읽어도 나머지로 진행한다 */
+  }
+  return null;
+}
+
+function writeAllStores(id) {
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      store.setItem(CLIENT_ID_KEY, id);
+    } catch {
+      /* 하나 실패해도 나머지에 남는다 */
+    }
+  }
+  try {
+    document.cookie = `agid=${encodeURIComponent(id)};path=/;max-age=31536000;SameSite=Lax`;
+  } catch {
+    /* 쿠키 저장 실패는 무시한다 */
+  }
+  // IndexedDB에도 남긴다. 저장소 삭제 시 함께 지워지는 경우가 많지만
+  // 일부만 지우는 경우를 대비한 추가 경로다.
+  try {
+    const req = indexedDB.open("apple-game", 1);
+    req.onupgradeneeded = () => {
+      const idb = req.result;
+      if (!idb.objectStoreNames.contains("kv")) idb.createObjectStore("kv");
+    };
+    req.onsuccess = () => {
+      try {
+        const idb = req.result;
+        const tx = idb.transaction("kv", "readwrite");
+        tx.objectStore("kv").put(id, CLIENT_ID_KEY);
+      } catch {
+        /* 저장 실패는 무시한다 */
+      }
+    };
+  } catch {
+    /* IndexedDB를 못 써도 나머지로 충분하다 */
   }
 }
 
+function loadClientId() {
+  const saved = readAnyStore();
+  if (saved) {
+    writeAllStores(saved);
+    return saved;
+  }
+  const fresh =
+    Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  writeAllStores(fresh);
+  return fresh;
+}
+
 const clientId = loadClientId();
+
+// IndexedDB에만 남아 있던 값이 있으면 그것으로 되살려 차단을 유지한다
+(async () => {
+  try {
+    const idb = await new Promise((resolve, reject) => {
+      const req = indexedDB.open("apple-game", 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains("kv")) {
+          req.result.createObjectStore("kv");
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    const prior = await new Promise((resolve) => {
+      const tx = idb.transaction("kv", "readonly");
+      const r = tx.objectStore("kv").get(CLIENT_ID_KEY);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => resolve(null);
+    });
+    if (prior && prior !== clientId) writeAllStores(prior);
+  } catch {
+    /* 복원 실패는 무시한다 */
+  }
+})();
 
 // 저장된 닉네임이 사칭·조롱용이면 그 단어를 돌려준다 (차단 판단용)
 export function getTargetedViolation() {
