@@ -2,6 +2,7 @@ import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js";
 import {
   getNickname,
   setNickname,
+  hasNickname,
   sendMessage,
   watchMessages,
   startPresence,
@@ -29,6 +30,10 @@ const finalScoreEl = document.getElementById("final-score");
 const endTitleEl = document.getElementById("end-title");
 const playerNameInput = document.getElementById("player-name");
 const submitScoreBtn = document.getElementById("submit-score-btn");
+const submitScoreBtnFixed = document.getElementById("submit-score-btn-fixed");
+const scoreNickSetup = document.getElementById("score-nick-setup");
+const scoreNickFixed = document.getElementById("score-nick-fixed");
+const scoreNicknameEl = document.getElementById("score-nickname");
 const submitStatusEl = document.getElementById("submit-status");
 const paleToggle = document.getElementById("pale-toggle");
 const bgmToggle = document.getElementById("bgm-toggle");
@@ -253,6 +258,8 @@ function startGame() {
   playerNameInput.value = "";
   submitStatusEl.textContent = "";
   submitScoreBtn.disabled = false;
+  submitScoreBtnFixed.disabled = false;
+  renderScoreNameArea();
 
   buildGrid();
   clearSelectionVisual();
@@ -275,17 +282,36 @@ function endGame(cleared) {
     endTitleEl.textContent = "시간 종료!";
   }
   finalScoreEl.textContent = score;
+  renderScoreNameArea();
   endOverlay.hidden = false;
+}
+
+// 채팅 닉네임과 랭킹 이름을 하나로 쓴다. 이미 정해둔 닉네임이 있으면 그대로 사용한다.
+function renderScoreNameArea() {
+  const nick = getNickname();
+  const fixed = nick.length > 0;
+  scoreNickSetup.hidden = fixed;
+  scoreNickFixed.hidden = !fixed;
+  if (fixed) scoreNicknameEl.textContent = nick;
 }
 
 async function handleSubmitScore() {
   if (scoreSubmitted) return;
-  const name = playerNameInput.value.trim();
+
+  let name = getNickname();
   if (!name) {
-    submitStatusEl.textContent = "이름을 입력해주세요.";
-    return;
+    const typed = playerNameInput.value.trim();
+    if (!typed) {
+      submitStatusEl.textContent = "닉네임을 입력해주세요.";
+      return;
+    }
+    name = setNickname(typed);
+    renderNickname();
+    renderScoreNameArea();
   }
+
   submitScoreBtn.disabled = true;
+  submitScoreBtnFixed.disabled = true;
   submitStatusEl.textContent = "등록 중...";
   try {
     // 화면에 표시된 점수 변수 대신 실제로 사라진 사과 수를 다시 세어 보낸다.
@@ -302,6 +328,7 @@ async function handleSubmitScore() {
     console.error(err);
     submitStatusEl.textContent = `등록 실패: ${err.message}`;
     submitScoreBtn.disabled = false;
+    submitScoreBtnFixed.disabled = false;
   }
 }
 
@@ -402,6 +429,10 @@ startBtn.addEventListener("click", startGame);
 retryBtn.addEventListener("click", startGame);
 resetBtn.addEventListener("click", startGame);
 submitScoreBtn.addEventListener("click", handleSubmitScore);
+submitScoreBtnFixed.addEventListener("click", handleSubmitScore);
+playerNameInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleSubmitScore();
+});
 
 rankingBtn.addEventListener("click", openRanking);
 rankingClose.addEventListener("click", () => {
@@ -444,6 +475,7 @@ function renderNickname() {
   nickLabelEl.textContent = hasNick ? nick : "닉네임 미설정";
   nickLabelEl.parentElement.classList.toggle("is-set", hasNick);
   nickSetupEl.hidden = hasNick;
+  renderScoreNameArea();
   chatInput.disabled = !hasNick;
   chatSendBtn.disabled = !hasNick;
   chatInput.placeholder = hasNick ? "메시지 입력" : "닉네임을 먼저 정하세요";
@@ -514,6 +546,7 @@ chatForm.addEventListener("submit", async (e) => {
 });
 
 renderNickname();
+renderScoreNameArea();
 watchMessages(renderMessages);
 startPresence((count) => {
   onlineCountEl.textContent = count === null ? "–" : `${count}명`;

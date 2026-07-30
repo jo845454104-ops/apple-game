@@ -8,28 +8,50 @@ const NICK_KEY = "apple-game-nickname";
 // 읽기 횟수가 접속자 수의 제곱으로 늘어난다. 하나의 문서에 모아두고
 // 주기적으로 한 번씩만 읽는다.
 const PRESENCE_PATH = ["meta", "presence"];
-const HEARTBEAT_MS = 45000;
-const POLL_MS = 20000;
-const ONLINE_WINDOW_MS = 100000;
+const CLIENT_ID_KEY = "apple-game-client-id";
+const HEARTBEAT_MS = 30000;
+const POLL_MS = 15000;
+const ONLINE_WINDOW_MS = 75000;
 const STALE_MS = 15 * 60 * 1000;
 
-const clientId =
-  Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+// 새로고침할 때마다 새 ID를 만들면 같은 사람이 여러 명으로 집계된다.
+// 브라우저에 저장해두고 계속 같은 ID를 쓴다.
+function loadClientId() {
+  try {
+    const saved = localStorage.getItem(CLIENT_ID_KEY);
+    if (saved) return saved;
+    const fresh =
+      Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    localStorage.setItem(CLIENT_ID_KEY, fresh);
+    return fresh;
+  } catch {
+    return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  }
+}
+
+const clientId = loadClientId();
 
 export function getNickname() {
   try {
-    return sessionStorage.getItem(NICK_KEY) || "";
+    return localStorage.getItem(NICK_KEY) || "";
   } catch {
     return "";
   }
 }
 
+export function hasNickname() {
+  return getNickname().length > 0;
+}
+
+// 닉네임은 이 브라우저에 계속 남고, 한 번 정하면 다시 바꿀 수 없다.
 export function setNickname(name) {
   const trimmed = name.trim().slice(0, 12);
+  if (!trimmed) return "";
   try {
-    sessionStorage.setItem(NICK_KEY, trimmed);
+    if (localStorage.getItem(NICK_KEY)) return localStorage.getItem(NICK_KEY);
+    localStorage.setItem(NICK_KEY, trimmed);
   } catch {
-    /* 저장 실패해도 이번 세션 동안은 화면 상태로만 유지된다 */
+    /* 저장이 막혀 있어도 화면 상태로는 진행된다 */
   }
   return trimmed;
 }

@@ -51,10 +51,17 @@
           <div class="overlay__card">
             <p class="overlay__title" id="end-title">시간 종료!</p>
             <p class="overlay__result"><span id="final-score">0</span>개 터뜨렸어요</p>
-            <div class="name-row">
-              <input type="text" id="player-name" maxlength="12" placeholder="이름을 입력하세요" />
+
+            <div class="name-row" id="score-nick-setup" hidden>
+              <input type="text" id="player-name" maxlength="12" placeholder="닉네임을 정하세요 (변경 불가)" />
               <button type="button" class="play-btn small" id="submit-score-btn">랭킹 등록</button>
             </div>
+
+            <div class="name-row name-row--fixed" id="score-nick-fixed" hidden>
+              <span class="fixed-nick" id="score-nickname"></span>
+              <button type="button" class="play-btn small" id="submit-score-btn-fixed">랭킹 등록</button>
+            </div>
+
             <p class="submit-status" id="submit-status"></p>
             <button type="button" class="play-btn" id="retry-btn">다시하기</button>
           </div>
@@ -78,7 +85,7 @@
       </div>
 
       <div class="nick-setup" id="nick-setup">
-        <p class="nick-setup__note">닉네임은 한 번 정하면 이 창을 닫기 전까지 바꿀 수 없습니다.</p>
+        <p class="nick-setup__note">⚠️ 닉네임은 <strong>한 번 정하면 변경할 수 없습니다.</strong> 채팅과 랭킹에 함께 사용되니 신중히 정하세요.</p>
         <div class="nick-setup__row">
           <input type="text" id="nick-input" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
           <button type="button" class="play-btn small" id="nick-save-btn">확인</button>
