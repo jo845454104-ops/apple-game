@@ -1,4 +1,4 @@
-import { getFirestoreApi } from "./firebase-app.js";
+import { getFirestoreApi } from "./firebase-app.js?v=6";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
