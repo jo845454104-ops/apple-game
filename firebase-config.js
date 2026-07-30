@@ -5,12 +5,12 @@
 // 4) Firestore Database를 만들고(테스트 모드로 시작), 컬렉션 이름은 leaderboard.js의 COLLECTION_NAME과 맞으면 됩니다 ("scores").
 
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyC0Cy27yGnYhTHHZW6ofr6IDxPzAZ9CPe0",
+  authDomain: "jo8454-ea749.firebaseapp.com",
+  projectId: "jo8454-ea749",
+  storageBucket: "jo8454-ea749.firebasestorage.app",
+  messagingSenderId: "1084112954795",
+  appId: "1:1084112954795:web:105b0a76ee7612ad701eee",
 };
 
 export function isFirebaseConfigured() {

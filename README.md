@@ -22,34 +22,24 @@ python3 -m http.server 8080
 - 제한 시간 2분 안에 최대한 많은 점수를 모으세요. (전부 클리어하면 걸린 시간이 표시됩니다)
 - 우측 하단 `연한 색` 체크박스로 사과 채도를 낮출 수 있고, `BGM` 체크박스로 배경음을 켤 수 있습니다.
 
-## 온라인 랭킹(리더보드) 설정
+## 온라인 랭킹(리더보드)
 
-기본 상태에서는 `firebase-config.js`가 플레이스홀더 값이라 **로컬(브라우저) 랭킹**으로만 동작합니다.
-모두가 점수를 공유하는 온라인 랭킹을 쓰려면 아래처럼 본인 Firebase 프로젝트를 연결하세요.
+Firebase Firestore 기반의 **온라인 공유 랭킹**이 이미 연결되어 있습니다.
+게임이 끝나면 닉네임을 입력해 등록할 수 있고, 상단 `🏆 랭킹` 버튼으로 모든 참가자의 상위 10위를 볼 수 있습니다.
 
-1. https://console.firebase.google.com 에서 새 프로젝트 생성 (무료 Spark 요금제로 충분)
-2. 프로젝트 설정 > 일반 > "내 앱"에서 웹 앱(</>) 추가 → 설정 객체(`firebaseConfig`) 복사
-3. `firebase-config.js`의 값을 복사한 값으로 교체
-4. Firebase 콘솔 좌측 메뉴 **Firestore Database** 생성 (테스트 모드로 시작해도 무방)
-5. 저장 후 새로고침하면 자동으로 온라인 랭킹으로 전환됩니다. (랭킹 모달 상단에 "온라인 공유 랭킹"이라고 표시됨)
+- 프로젝트: `jo8454-ea749` (리전: asia-northeast3 / 서울)
+- 컬렉션: `scores` (필드: `name`, `score`, `createdAt`)
+- 보안 규칙: [firestore.rules](firestore.rules) — 누구나 읽기/등록 가능하되, 닉네임 1~12자·점수 0~170 범위를 검증하고 **수정과 삭제는 차단**합니다.
 
-> Firestore 테스트 모드는 일정 기간 후 보안 규칙이 잠깁니다. 대회 기간이 길다면 아래처럼 `scores` 컬렉션에 한해 읽기/쓰기만 허용하는 규칙을 설정하세요.
->
-> ```
-> rules_version = '2';
-> service cloud.firestore {
->   match /databases/{database}/documents {
->     match /scores/{doc} {
->       allow read: if true;
->       allow create: if request.resource.data.name is string
->         && request.resource.data.score is int
->         && request.resource.data.score >= 0
->         && request.resource.data.score <= 170;
->       allow update, delete: if false;
->     }
->   }
-> }
-> ```
+규칙을 수정했다면 아래 명령으로 다시 배포하세요.
+
+```bash
+npx firebase-tools deploy --only firestore:rules --project jo8454-ea749
+```
+
+`firebase-config.js`의 값을 플레이스홀더(`YOUR_...`)로 되돌리면 서버 없이 로컬(localStorage) 랭킹으로 자동 전환됩니다.
+
+> 참고: 웹 클라이언트의 `apiKey`는 비밀값이 아니라 프로젝트 식별자라 공개 저장소에 포함되어도 무방합니다. 실제 접근 통제는 위 보안 규칙이 담당합니다.
 
 ## GitHub로 공유하기
 
@@ -68,5 +58,6 @@ git push -u origin main
 - `index.html` — 마크업
 - `style.css` — 원본과 동일한 초록 프레임 + 17×10 그리드 스타일
 - `script.js` — 게임 로직 (드래그 선택, 합 판정, 타이머)
-- `firebase-config.js` — Firebase 프로젝트 설정 (본인 값으로 교체 필요)
+- `firebase-config.js` — Firebase 프로젝트 설정
 - `leaderboard.js` — 점수 등록/조회 (Firebase 우선, 미설정 시 localStorage로 폴백)
+- `firestore.rules` — Firestore 보안 규칙
