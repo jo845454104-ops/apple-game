@@ -53,10 +53,24 @@ service cloud.firestore {
         && resource.data.createdAt < request.time - duration.value(2, 'm');
     }
 
+    // 닉네임 선점. 문서 ID가 닉네임이라 이미 있으면 생성이 실패해 중복이 막힌다.
+    match /nicknames/{nick} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['owner', 'createdAt'])
+        && request.resource.data.owner is string
+        && request.resource.data.owner.size() <= 64
+        && request.resource.data.createdAt == request.time
+        && cleanName(nick)
+        && nick.size() > 0
+        && nick.size() <= 12;
+      allow update, delete: if false;
+    }
+
     // 조작이 감지된 기기 목록. 본인 기기를 등록할 수만 있고 지울 수는 없다.
     match /blocked/{clientId} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasOnly(['reason', 'name', 'createdAt'])
+        && request.resource.data.name is string
         && request.resource.data.reason is string
         && request.resource.data.reason.size() <= 200
         && request.resource.data.createdAt == request.time;

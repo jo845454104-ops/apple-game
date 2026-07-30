@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=14";
-import { findTargeted } from "./profanity.js?v=14";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=16";
+import { findTargeted } from "./profanity.js?v=16";
 import {
   getNickname,
   setNickname,
@@ -13,7 +13,9 @@ import {
   getTargetedViolation,
   fetchBlockedList,
   blockClient,
-} from "./chat.js?v=14";
+  reserveNickname,
+  clearNickname,
+} from "./chat.js?v=16";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -322,6 +324,11 @@ async function handleSubmitScore() {
     const nickProblem = checkNickname(typed);
     if (nickProblem) {
       submitStatusEl.textContent = nickProblem;
+      return;
+    }
+    const taken = await reserveNickname(typed);
+    if (!taken.ok) {
+      submitStatusEl.textContent = taken.reason;
       return;
     }
     name = setNickname(typed);
@@ -650,7 +657,7 @@ function renderOnlineList() {
       const me = u.isMe ? '<span class="online-list__me">나</span>' : "";
       const btn = u.isMe
         ? ""
-        : `<button type="button" class="block-btn" data-id="${escapeHtml(u.id)}" data-name="${escapeHtml(u.name)}">차단</button>`;
+        : `<button type="button" class="block-btn" data-id="${escapeHtml(u.id)}" data-name="${escapeHtml(u.name)}" data-fp="${escapeHtml(u.fp || "")}">차단</button>`;
       return `<li><span class="rank">${i + 1}</span><span class="name">${name}</span>${me}${btn}</li>`;
     })
     .join("");
@@ -669,7 +676,7 @@ onlineListEl.addEventListener("click", async (e) => {
   btn.disabled = true;
   btn.textContent = "차단 중";
   try {
-    await blockClient(id, name);
+    await blockClient(id, name, btn.dataset.fp);
     btn.textContent = "차단됨";
     renderBlockedList();
   } catch (err) {
@@ -743,7 +750,7 @@ function renderMessages(list) {
   chatListEl.scrollTop = chatListEl.scrollHeight;
 }
 
-function saveNicknameFromInput() {
+async function saveNicknameFromInput() {
   const value = nickInput.value.trim();
   // 사칭·조롱 닉네임은 시도한 것만으로 이 기기를 차단한다
   const targetedTry = findTargeted(value);
@@ -756,6 +763,16 @@ function saveNicknameFromInput() {
     chatStatusEl.textContent = problem;
     return;
   }
+
+  nickSaveBtn.disabled = true;
+  chatStatusEl.textContent = "확인 중...";
+  const taken = await reserveNickname(value);
+  nickSaveBtn.disabled = false;
+  if (!taken.ok) {
+    chatStatusEl.textContent = taken.reason;
+    return;
+  }
+
   setNickname(value);
   nickInput.value = "";
   chatStatusEl.textContent = "";
@@ -805,6 +822,20 @@ if (targeted) {
 isBlockedOnServer().then((serverReason) => {
   if (serverReason) lockOut(serverReason, { report: false });
 });
+
+// 이미 닉네임을 쓰고 있던 사람도 접속 시 소유권을 확보한다.
+// 다른 사람이 먼저 가져갔다면 비워서 새로 정하게 한다.
+(async () => {
+  const existing = getNickname();
+  if (!existing) return;
+  const claim = await reserveNickname(existing);
+  if (!claim.ok) {
+    clearNickname();
+    renderNickname();
+    renderScoreNameArea();
+    chatStatusEl.textContent = "닉네임이 이미 사용 중이라 다시 정해야 합니다.";
+  }
+})();
 
 renderNickname();
 renderScoreNameArea();

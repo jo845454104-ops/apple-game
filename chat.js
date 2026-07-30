@@ -1,5 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=14";
-import { isClean, findProfanity, findTargeted } from "./profanity.js?v=14";
+import { getFirestoreApi } from "./firebase-app.js?v=16";
+import { isClean, findProfanity, findTargeted } from "./profanity.js?v=16";
+import { getFingerprint } from "./fingerprint.js?v=16";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -53,27 +54,41 @@ export async function reportCheat(reason, name) {
   const ctx = await getFirestoreApi();
   if (!ctx) return;
   const { db, api } = ctx;
+  const payload = {
+    reason: String(reason).slice(0, 200),
+    name: String(name || "").slice(0, 12),
+    createdAt: api.serverTimestamp(),
+  };
+  // 저장소를 지우거나 시크릿 창으로 와도 같은 기기면 지문으로 다시 걸린다
+  const ids = [clientId];
   try {
-    await api.setDoc(api.doc(db, "blocked", clientId), {
-      reason: String(reason).slice(0, 200),
-      name: String(name || "").slice(0, 12),
-      createdAt: api.serverTimestamp(),
-    });
-  } catch (err) {
-    console.error("차단 기록 실패", err);
+    ids.push(await getFingerprint());
+  } catch {
+    /* 지문을 못 만들어도 기기 ID로는 남긴다 */
   }
+  await Promise.all(
+    ids.map((id) =>
+      api.setDoc(api.doc(db, "blocked", id), payload).catch((err) => {
+        console.error("차단 기록 실패", err);
+      })
+    )
+  );
 }
 
 // 운영자가 접속자 목록에서 특정 기기를 즉시 차단한다.
-export async function blockClient(targetId, name) {
+export async function blockClient(targetId, name, fingerprint) {
   const ctx = await getFirestoreApi();
   if (!ctx) throw new Error("서버에 연결되어 있지 않습니다.");
   const { db, api } = ctx;
-  await api.setDoc(api.doc(db, "blocked", targetId), {
+  const payload = {
     reason: "운영자 차단",
     name: String(name || "").slice(0, 12),
     createdAt: api.serverTimestamp(),
-  });
+  };
+  const ids = fingerprint ? [targetId, fingerprint] : [targetId];
+  await Promise.all(
+    ids.map((id) => api.setDoc(api.doc(db, "blocked", id), payload))
+  );
 }
 
 export async function fetchBlockedList() {
@@ -90,12 +105,21 @@ export async function isBlockedOnServer() {
   const ctx = await getFirestoreApi();
   if (!ctx) return null;
   const { db, api } = ctx;
+  const ids = [clientId];
   try {
-    const snap = await api.getDoc(api.doc(db, "blocked", clientId));
-    return snap.exists() ? snap.data().reason || "부정 행위 감지" : null;
+    ids.push(await getFingerprint());
   } catch {
-    return null;
+    /* 지문 실패 시 기기 ID로만 확인한다 */
   }
+  for (const id of ids) {
+    try {
+      const snap = await api.getDoc(api.doc(db, "blocked", id));
+      if (snap.exists()) return snap.data().reason || "부정 행위 감지";
+    } catch {
+      /* 조회 실패는 무시하고 다음 ID를 확인한다 */
+    }
+  }
+  return null;
 }
 
 export function getNickname() {
@@ -117,6 +141,42 @@ export function hasNickname() {
 }
 
 // 닉네임은 이 브라우저에 계속 남고, 한 번 정하면 다시 바꿀 수 없다.
+// 닉네임을 서버에 선점 등록한다. 이미 누가 쓰고 있으면 실패한다.
+// 문서 ID가 닉네임이고 create만 허용돼 있어 먼저 등록한 사람이 갖는다.
+export async function reserveNickname(name) {
+  const trimmed = String(name).trim().slice(0, 12);
+  const ctx = await getFirestoreApi();
+  if (!ctx) return { ok: true, offline: true };
+
+  const { db, api } = ctx;
+  const ref = api.doc(db, "nicknames", trimmed);
+
+  const existing = await api.getDoc(ref).catch(() => null);
+  if (existing?.exists()) {
+    if (existing.data().owner === clientId) return { ok: true };
+    return { ok: false, reason: "이미 사용 중인 닉네임입니다." };
+  }
+
+  try {
+    await api.setDoc(ref, {
+      owner: clientId,
+      createdAt: api.serverTimestamp(),
+    });
+    return { ok: true };
+  } catch {
+    // 동시에 같은 이름을 등록하면 나중 요청이 여기로 떨어진다
+    return { ok: false, reason: "이미 사용 중인 닉네임입니다." };
+  }
+}
+
+export function clearNickname() {
+  try {
+    localStorage.removeItem(NICK_KEY);
+  } catch {
+    /* 저장소를 못 써도 화면 상태는 갱신된다 */
+  }
+}
+
 export function checkNickname(name) {
   const trimmed = String(name).trim().slice(0, 12);
   if (!trimmed) return "닉네임을 입력해주세요.";
@@ -236,9 +296,15 @@ export async function startPresence(onCount) {
     try {
       // 접속자 목록에 이름을 띄우기 위해 닉네임도 함께 보낸다
       const nick = getNickname();
+      let fp = "";
+      try {
+        fp = await getFingerprint();
+      } catch {
+        /* 지문 없이도 접속자 수는 집계된다 */
+      }
       await api.setDoc(
         ref,
-        { clients: { [clientId]: { t: Date.now(), n: nick } } },
+        { clients: { [clientId]: { t: Date.now(), n: nick, f: fp } } },
         { merge: true }
       );
     } catch (err) {
@@ -258,9 +324,10 @@ export async function startPresence(onCount) {
         // 예전 형식은 값이 숫자 하나였다
         const ts = typeof value === "object" && value !== null ? value.t : value;
         const nick = typeof value === "object" && value !== null ? value.n : "";
+        const fp = typeof value === "object" && value !== null ? value.f : "";
         const age = now - Number(ts);
         if (age < ONLINE_WINDOW_MS) {
-          online.push({ id, name: nick || "", isMe: id === clientId });
+          online.push({ id, fp: fp || "", name: nick || "", isMe: id === clientId });
         } else if (age > STALE_MS) {
           stale.push(id);
         }
