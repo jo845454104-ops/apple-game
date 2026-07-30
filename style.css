@@ -1166,3 +1166,22 @@ body {
   min-height: 14px;
   margin-top: 6px;
 }
+
+/* 관리자 창의 각 목록은 자체 스크롤을 갖는다 */
+.admin-chat-list,
+#admin-score-list,
+#blocked-list {
+  max-height: 200px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#online-list {
+  max-height: 220px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal__card {
+  overflow-y: auto;
+}
