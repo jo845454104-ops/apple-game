@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=18";
-import { findTargeted } from "./profanity.js?v=18";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=19";
+import { findTargeted } from "./profanity.js?v=19";
 import {
   getNickname,
   setNickname,
@@ -15,7 +15,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=18";
+} from "./chat.js?v=19";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -254,6 +254,10 @@ function tick() {
 function startGame() {
   if (isBlocked()) {
     lockOut(isBlocked());
+    return;
+  }
+  if (!getNickname()) {
+    updateEntryGate();
     return;
   }
   score = 0;
@@ -551,6 +555,54 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () 
 
 renderThemeButton();
 
+const entryGateEl = document.getElementById("entry-gate");
+const entryNickInput = document.getElementById("entry-nick");
+const entryNickBtn = document.getElementById("entry-nick-btn");
+const entryNickMsg = document.getElementById("entry-nick-msg");
+
+// 닉네임이 없으면 아무것도 하기 전에 먼저 정하게 한다
+function updateEntryGate() {
+  const needsNick = !getNickname();
+  entryGateEl.hidden = !needsNick;
+  if (needsNick) entryNickInput.focus();
+}
+
+async function saveEntryNickname() {
+  const value = entryNickInput.value.trim();
+
+  const targetedTry = findTargeted(value);
+  if (targetedTry) {
+    lockOut(`금지된 닉네임 시도 (${targetedTry})`);
+    return;
+  }
+  const problem = checkNickname(value);
+  if (problem) {
+    entryNickMsg.textContent = problem;
+    return;
+  }
+
+  entryNickBtn.disabled = true;
+  entryNickMsg.textContent = "확인 중...";
+  const taken = await reserveNickname(value);
+  entryNickBtn.disabled = false;
+  if (!taken.ok) {
+    entryNickMsg.textContent = taken.reason;
+    return;
+  }
+
+  setNickname(value);
+  entryNickInput.value = "";
+  entryNickMsg.textContent = "";
+  renderNickname();
+  renderScoreNameArea();
+  updateEntryGate();
+}
+
+entryNickBtn.addEventListener("click", saveEntryNickname);
+entryNickInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") saveEntryNickname();
+});
+
 const onlineCountEl = document.getElementById("online-count");
 const onlineBtn = document.getElementById("online-btn");
 const onlineModal = document.getElementById("online-modal");
@@ -655,10 +707,11 @@ function renderOnlineList() {
         ? escapeHtml(u.name)
         : '<span class="online-list__anon">닉네임 미설정</span>';
       const me = u.isMe ? '<span class="online-list__me">나</span>' : "";
+      const code = `<span class="online-list__code">${escapeHtml(u.id)}</span>`;
       const btn = u.isMe
         ? ""
         : `<button type="button" class="block-btn" data-id="${escapeHtml(u.id)}" data-name="${escapeHtml(u.name)}" data-fp="${escapeHtml(u.fp || "")}" data-hw="${escapeHtml(u.hw || "")}">차단</button>`;
-      return `<li><span class="rank">${i + 1}</span><span class="name">${name}</span>${me}${btn}</li>`;
+      return `<li><span class="rank">${i + 1}</span><span class="name">${name}${code}</span>${me}${btn}</li>`;
     })
     .join("");
 }
@@ -833,9 +886,12 @@ isBlockedOnServer().then((serverReason) => {
     clearNickname();
     renderNickname();
     renderScoreNameArea();
-    chatStatusEl.textContent = "닉네임이 이미 사용 중이라 다시 정해야 합니다.";
+    entryNickMsg.textContent = "닉네임이 이미 사용 중이라 다시 정해야 합니다.";
+    updateEntryGate();
   }
 })();
+
+updateEntryGate();
 
 renderNickname();
 renderScoreNameArea();

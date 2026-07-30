@@ -130,6 +130,23 @@
     <p class="footer-note">* DSA 아카데미 사과게임 대회용 미니게임입니다 :)</p>
   </div>
 
+  <div class="entry-gate" id="entry-gate" hidden>
+    <div class="entry-gate__card">
+      <p class="entry-gate__icon">🍎</p>
+      <h2 class="entry-gate__title">닉네임을 정하세요</h2>
+      <p class="entry-gate__desc">
+        채팅과 랭킹에 함께 사용됩니다.<br />
+        <strong>한 번 정하면 변경할 수 없습니다.</strong>
+      </p>
+      <div class="name-row">
+        <input type="text" id="entry-nick" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+        <button type="button" class="play-btn small" id="entry-nick-btn">확인</button>
+      </div>
+      <p class="submit-status" id="entry-nick-msg"></p>
+      <p class="entry-gate__note">이미 쓰이는 닉네임이나 부적절한 표현은 사용할 수 없습니다.</p>
+    </div>
+  </div>
+
   <div class="lockout" id="lockout" hidden>
     <div class="lockout__card">
       <p class="lockout__icon">🚫</p>
@@ -179,6 +196,6 @@
 
   <!-- v 값은 파일을 고칠 때마다 올린다. 브라우저 캐시 때문에 HTML만 새것이고
        스크립트는 옛것인 상태가 생기지 않도록 모든 모듈에 같은 값을 붙인다. -->
-  <script type="module" src="script.js?v=18"></script>
+  <script type="module" src="script.js?v=19"></script>
 </body>
 </html>
