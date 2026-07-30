@@ -13,6 +13,15 @@ export const firebaseConfig = {
   appId: "1:1084112954795:web:105b0a76ee7612ad701eee",
 };
 
+// App Check용 reCAPTCHA v3 사이트 키.
+// 값을 넣으면 파이썬 스크립트 같은 자동화 요청이 원천 차단된다.
+// 발급 방법은 README의 "봇·도배 차단(App Check)" 항목 참고.
+export const recaptchaSiteKey = "";
+
+export function isAppCheckConfigured() {
+  return recaptchaSiteKey.length > 0;
+}
+
 export function isFirebaseConfigured() {
   return !firebaseConfig.apiKey.startsWith("YOUR_");
 }

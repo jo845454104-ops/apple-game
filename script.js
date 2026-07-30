@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=28";
-import { findTargeted } from "./profanity.js?v=28";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=29";
+import { findTargeted } from "./profanity.js?v=29";
 import {
   getNickname,
   setNickname,
@@ -18,7 +18,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=28";
+} from "./chat.js?v=29";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -488,6 +488,36 @@ rankingModal.addEventListener("click", (e) => {
   if (e.target === rankingModal) rankingModal.hidden = true;
 });
 
+const APPLE_COLOR_KEY = "apple-game-apple-color";
+const appleColorBtn = document.getElementById("apple-color-btn");
+const appleColorIcon = document.getElementById("apple-color-icon");
+const appleColorLabel = document.getElementById("apple-color-label");
+
+function renderAppleColor() {
+  const green = gridEl.classList.contains("is-green");
+  appleColorIcon.textContent = green ? "🍎" : "🍏";
+  appleColorLabel.textContent = green ? "레드애플" : "그린애플";
+}
+
+try {
+  if (localStorage.getItem(APPLE_COLOR_KEY) === "green") {
+    gridEl.classList.add("is-green");
+  }
+} catch {
+  /* 저장소를 못 읽어도 기본(빨강)으로 진행한다 */
+}
+renderAppleColor();
+
+appleColorBtn.addEventListener("click", () => {
+  const green = gridEl.classList.toggle("is-green");
+  try {
+    localStorage.setItem(APPLE_COLOR_KEY, green ? "green" : "red");
+  } catch {
+    /* 저장 실패해도 이번 화면에는 적용된다 */
+  }
+  renderAppleColor();
+});
+
 paleToggle.addEventListener("change", () => {
   gridEl.classList.toggle("is-pale", paleToggle.checked);
 });
@@ -620,22 +650,36 @@ const onlinePwInput = document.getElementById("online-pw");
 const onlinePwBtn = document.getElementById("online-pw-btn");
 const onlinePwMsg = document.getElementById("online-pw-msg");
 
-// 비밀번호 자체는 코드에 없고 SHA-256 해시만 둔다.
+// 비밀번호는 코드에 없다. PBKDF2(20만 회) 해시만 두어
+// 해시를 보더라도 비밀번호를 되찾기 어렵게 한다.
+const ADMIN_SALT = "d4dadcbe50374387f6261732ad65cea1";
 const ADMIN_HASH =
-  "8d02a502793c9e16ae89bb936b24bc6f91987ca412e77a233e6ca7ebc32b491f";
-const ADMIN_KEY = "apple-game-admin";
+  "837bfa304ec1e67b1e5d7ac3a21b4ea4f2cb5ccb7a857bb30458f2ea1ccab2a4";
 
-async function sha256(text) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+// 인증 상태를 저장소에 남기지 않는다. 저장해두면 값만 바꿔 넣어
+// 비밀번호 없이 관리자 화면을 열 수 있기 때문이다.
+let adminUnlocked = false;
+
+function hex(buf) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function derive(password) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, [
+    "deriveBits",
+  ]);
+  const salt = Uint8Array.from(ADMIN_SALT.match(/../g).map((h) => parseInt(h, 16)));
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations: 200000, hash: "SHA-256" },
+    key,
+    256
+  );
+  return hex(bits);
+}
+
 function isAdmin() {
-  try {
-    return sessionStorage.getItem(ADMIN_KEY) === "1";
-  } catch {
-    return false;
-  }
+  return adminUnlocked;
 }
 
 const blockedSectionEl = document.getElementById("blocked-section");
@@ -798,16 +842,13 @@ async function checkAdminPassword() {
     onlinePwMsg.textContent = "비밀번호를 입력하세요.";
     return;
   }
-  const hash = await sha256(value);
+  onlinePwMsg.textContent = "확인 중...";
+  const hash = await derive(value);
   if (hash !== ADMIN_HASH) {
     onlinePwMsg.textContent = "비밀번호가 올바르지 않습니다.";
     return;
   }
-  try {
-    sessionStorage.setItem(ADMIN_KEY, "1");
-  } catch {
-    /* 저장이 막혀 있어도 이번 창에서는 열린다 */
-  }
+  adminUnlocked = true;
   onlinePwInput.value = "";
   onlinePwMsg.textContent = "";
   applyAdminView();
@@ -865,6 +906,8 @@ onlinePwInput.addEventListener("keydown", (e) => {
 });
 onlineClose.addEventListener("click", () => {
   onlineModal.hidden = true;
+  adminUnlocked = false;
+  applyAdminView();
 });
 onlineModal.addEventListener("click", (e) => {
   if (e.target === onlineModal) onlineModal.hidden = true;
