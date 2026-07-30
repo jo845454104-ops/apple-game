@@ -451,6 +451,41 @@ bgmToggle.addEventListener("change", () => {
   else stopBgm();
 });
 
+const THEME_KEY = "apple-game-theme";
+const themeBtn = document.getElementById("theme-btn");
+const themeIconEl = document.getElementById("theme-icon");
+const themeLabelEl = document.getElementById("theme-label");
+
+function currentTheme() {
+  const saved = document.documentElement.getAttribute("data-theme");
+  if (saved) return saved;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function renderThemeButton() {
+  const dark = currentTheme() === "dark";
+  themeIconEl.textContent = dark ? "☀️" : "🌙";
+  themeLabelEl.textContent = dark ? "라이트모드" : "다크모드";
+}
+
+themeBtn.addEventListener("click", () => {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  try {
+    localStorage.setItem(THEME_KEY, next);
+  } catch {
+    /* 저장이 막혀 있어도 이번 화면에는 적용된다 */
+  }
+  renderThemeButton();
+});
+
+// 직접 고른 적이 없으면 시스템 설정 변경을 그대로 따라간다
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  if (!document.documentElement.getAttribute("data-theme")) renderThemeButton();
+});
+
+renderThemeButton();
+
 const onlineCountEl = document.getElementById("online-count");
 const nickLabelEl = document.getElementById("nick-label");
 const nickSetupEl = document.getElementById("nick-setup");

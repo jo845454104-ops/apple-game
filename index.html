@@ -6,6 +6,15 @@
   <title>🍎 사과게임 - DSA 아카데미</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <link rel="stylesheet" href="style.css" />
+  <script>
+    // 스타일이 적용되기 전에 테마를 정해 화면이 번쩍이는 것을 막는다.
+    try {
+      var saved = localStorage.getItem("apple-game-theme");
+      if (saved === "dark" || saved === "light") {
+        document.documentElement.setAttribute("data-theme", saved);
+      }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <div class="wrap">
@@ -105,6 +114,9 @@
     </div>
 
     <div class="board-footer">
+      <button type="button" class="theme-btn" id="theme-btn" aria-label="다크모드 전환">
+        <span id="theme-icon">🌙</span><span id="theme-label">다크모드</span>
+      </button>
       <label class="opt-toggle">
         <input type="checkbox" id="pale-toggle" />
         <span>연한 색</span>
