@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🍎 사과게임 - DSA 아카데미</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <span class="eyebrow">DSA ACADEMY · APPLE GAME</span>
+      <h1 class="title">🍎 사과게임</h1>
+      <p class="subtitle">드래그해서 합이 10이 되는 사과를 터뜨리세요!</p>
+    </header>
+
+    <div class="hud">
+      <div class="hud__box">
+        <span class="hud__label">점수</span>
+        <span class="hud__value" id="score">0</span>
+      </div>
+      <div class="hud__box">
+        <span class="hud__label">남은 시간</span>
+        <span class="hud__value" id="time">2:00</span>
+      </div>
+      <button type="button" class="ghost-btn" id="ranking-btn">🏆 랭킹</button>
+      <button type="button" class="ghost-btn" id="reset-btn">Reset</button>
+    </div>
+
+    <div class="board-frame">
+      <div class="board-inner">
+        <div class="apple-grid" id="apple-grid"></div>
+        <div class="selection-box" id="selection-box" hidden></div>
+        <div class="sum-badge" id="sum-badge" hidden></div>
+
+        <div class="overlay" id="start-overlay">
+          <div class="overlay__card">
+            <p class="overlay__title">사과게임</p>
+            <p class="overlay__desc">2분 동안 합이 10이 되는 사과들을<br />드래그로 묶어서 최대한 많이 터뜨리세요!</p>
+            <button type="button" class="play-btn" id="start-btn">게임 시작</button>
+          </div>
+        </div>
+
+        <div class="overlay" id="end-overlay" hidden>
+          <div class="overlay__card">
+            <p class="overlay__title" id="end-title">시간 종료!</p>
+            <p class="overlay__result"><span id="final-score">0</span>개 터뜨렸어요</p>
+            <div class="name-row">
+              <input type="text" id="player-name" maxlength="12" placeholder="이름을 입력하세요" />
+              <button type="button" class="play-btn small" id="submit-score-btn">랭킹 등록</button>
+            </div>
+            <p class="submit-status" id="submit-status"></p>
+            <button type="button" class="play-btn" id="retry-btn">다시하기</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-timer">
+        <span class="side-timer__score" id="side-score">0</span>
+        <div class="side-timer__track">
+          <div class="side-timer__fill" id="timer-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="board-footer">
+      <label class="opt-toggle">
+        <input type="checkbox" id="pale-toggle" />
+        <span>연한 색</span>
+      </label>
+      <label class="opt-toggle">
+        <input type="checkbox" id="bgm-toggle" />
+        <span>BGM</span>
+      </label>
+    </div>
+
+    <p class="footer-note">* DSA 아카데미 사과게임 대회용 미니게임입니다 :)</p>
+  </div>
+
+  <div class="modal" id="ranking-modal" hidden>
+    <div class="modal__card">
+      <div class="modal__header">
+        <h2>🏆 최고 점수 랭킹</h2>
+        <button type="button" class="modal__close" id="ranking-close">&times;</button>
+      </div>
+      <p class="modal__status" id="ranking-source-note"></p>
+      <ol class="ranking-list" id="ranking-list"></ol>
+    </div>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
