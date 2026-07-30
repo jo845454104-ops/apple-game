@@ -30,7 +30,7 @@ body {
 
 .wrap {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1400px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -120,10 +120,19 @@ body {
   background: #3338c9;
 }
 
+.stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 14px;
+}
+
 .board-frame {
   position: relative;
-  width: min(100%, calc((100vh - 265px) * 1.62));
-  margin: 0 auto;
+  flex: 0 1 calc((100vh - 265px) * 1.62);
+  max-width: calc((100vh - 265px) * 1.62);
+  min-width: 0;
   display: flex;
   gap: 14px;
   align-items: stretch;
@@ -277,6 +286,202 @@ body {
 
 .side-timer__fill.is-low {
   background: linear-gradient(180deg, #fca5a5 0%, #dc2626 100%);
+}
+
+.chat-panel {
+  flex: 0 0 clamp(185px, 21vw, 270px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--slate-200);
+  border-radius: 20px;
+  padding: 14px 14px 12px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.1);
+  min-height: 0;
+}
+
+.chat-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.chat-panel__title {
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.chat-panel__nick {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--slate-400);
+  min-width: 0;
+}
+
+.chat-panel__nick #nick-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90px;
+}
+
+.chat-panel__nick.is-set #nick-label {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.link-btn {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--slate-400);
+  text-decoration: underline;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.link-btn:hover {
+  color: var(--accent);
+}
+
+.nick-setup {
+  padding: 10px 0;
+}
+
+.nick-setup[hidden] {
+  display: none;
+}
+
+.nick-setup__note {
+  font-size: 11px;
+  color: var(--slate-400);
+  line-height: 1.5;
+  margin-bottom: 7px;
+}
+
+.nick-setup__row {
+  display: flex;
+  gap: 6px;
+}
+
+.nick-setup input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--slate-200);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.nick-setup input:focus {
+  border-color: var(--accent);
+}
+
+.chat-list {
+  list-style: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 2px;
+}
+
+.chat-list li {
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.chat-list .chat-name {
+  font-weight: 700;
+  color: var(--accent);
+  margin-right: 5px;
+}
+
+.chat-list .chat-time {
+  font-size: 10px;
+  color: var(--slate-400);
+  margin-left: 5px;
+}
+
+.chat-list li.is-mine .chat-name {
+  color: var(--apple-red);
+}
+
+.chat-empty {
+  color: var(--slate-400);
+  text-align: center;
+  padding: 16px 0;
+}
+
+.chat-form {
+  display: flex;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--slate-200);
+}
+
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--slate-200);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.chat-form input:focus {
+  border-color: var(--accent);
+}
+
+.chat-form input:disabled {
+  background: var(--bg);
+  color: var(--slate-400);
+}
+
+.chat-send {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.chat-send:hover:not(:disabled) {
+  background: #3338c9;
+}
+
+.chat-send:disabled {
+  background: var(--slate-400);
+  cursor: default;
+}
+
+.chat-status {
+  min-height: 14px;
+  font-size: 11px;
+  color: var(--slate-400);
+  padding-top: 6px;
 }
 
 .board-footer {
@@ -528,10 +733,26 @@ body {
   padding: 12px 0;
 }
 
-@media (max-width: 900px) {
+/* 세로로 쌓으면 보드가 화면 밖으로 밀리므로, 진짜 좁은 화면에서만 아래로 내린다 */
+@media (max-width: 720px) {
+  .stage {
+    flex-direction: column;
+    align-items: center;
+  }
   .board-frame {
+    flex: 1 1 auto;
+    max-width: 100%;
+    width: 100%;
     flex-direction: column-reverse;
     padding: 16px;
+  }
+  .chat-panel {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 520px;
+  }
+  .chat-list {
+    max-height: 200px;
   }
   .side-timer {
     flex-direction: row;

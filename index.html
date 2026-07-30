@@ -24,10 +24,15 @@
         <span class="hud__label">남은 시간</span>
         <span class="hud__value" id="time">2:00</span>
       </div>
+      <div class="hud__box hud__box--online">
+        <span class="hud__label">접속자</span>
+        <span class="hud__value" id="online-count">–</span>
+      </div>
       <button type="button" class="ghost-btn" id="ranking-btn">🏆 랭킹</button>
       <button type="button" class="ghost-btn" id="reset-btn">Reset</button>
     </div>
 
+    <div class="stage">
     <div class="board-frame">
       <div class="board-inner">
         <div class="apple-grid" id="apple-grid"></div>
@@ -62,6 +67,34 @@
           <div class="side-timer__fill" id="timer-fill"></div>
         </div>
       </div>
+    </div>
+
+    <aside class="chat-panel">
+      <div class="chat-panel__head">
+        <h2 class="chat-panel__title">💬 채팅</h2>
+        <div class="chat-panel__nick">
+          <span id="nick-label">닉네임 미설정</span>
+        </div>
+      </div>
+
+      <div class="nick-setup" id="nick-setup">
+        <p class="nick-setup__note">닉네임은 한 번 정하면 이 창을 닫기 전까지 바꿀 수 없습니다.</p>
+        <div class="nick-setup__row">
+          <input type="text" id="nick-input" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+          <button type="button" class="play-btn small" id="nick-save-btn">확인</button>
+        </div>
+      </div>
+
+      <ol class="chat-list" id="chat-list">
+        <li class="chat-empty">불러오는 중...</li>
+      </ol>
+
+      <form class="chat-form" id="chat-form">
+        <input type="text" id="chat-input" maxlength="200" placeholder="메시지 입력" autocomplete="off" />
+        <button type="submit" class="chat-send" id="chat-send">전송</button>
+      </form>
+      <p class="chat-status" id="chat-status"></p>
+    </aside>
     </div>
 
     <div class="board-footer">

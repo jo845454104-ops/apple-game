@@ -1,4 +1,11 @@
-import { submitScore, fetchTopScores } from "./leaderboard.js";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js";
+import {
+  getNickname,
+  setNickname,
+  sendMessage,
+  watchMessages,
+  startPresence,
+} from "./chat.js";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -41,6 +48,9 @@ let startX = 0;
 let startY = 0;
 let clearedCount = 0;
 let scoreSubmitted = false;
+let clearEvents = 0;
+let startedAt = 0;
+let finishedAt = 0;
 
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -160,6 +170,7 @@ function finalizeSelection() {
       a.el.classList.add("is-cleared");
     });
     clearedCount += selected.length;
+    clearEvents += 1;
     score += selected.length;
     scoreEl.textContent = score;
     sideScoreEl.textContent = score;
@@ -228,6 +239,9 @@ function startGame() {
   score = 0;
   timeLeft = GAME_SECONDS;
   scoreSubmitted = false;
+  clearEvents = 0;
+  startedAt = Date.now();
+  finishedAt = 0;
   scoreEl.textContent = score;
   sideScoreEl.textContent = score;
   timeEl.textContent = formatTime(timeLeft);
@@ -250,6 +264,7 @@ function startGame() {
 function endGame(cleared) {
   playing = false;
   isSelecting = false;
+  finishedAt = Date.now();
   window.clearInterval(timerId);
   clearSelectionVisual();
 
@@ -273,14 +288,19 @@ async function handleSubmitScore() {
   submitScoreBtn.disabled = true;
   submitStatusEl.textContent = "등록 중...";
   try {
-    const result = await submitScore(name, score);
+    // 화면에 표시된 점수 변수 대신 실제로 사라진 사과 수를 다시 세어 보낸다.
+    const actualScore = apples.filter((a) => a.cleared).length;
+    const result = await submitScore(name, actualScore, {
+      clears: clearEvents,
+      durationMs: Math.max(0, (finishedAt || Date.now()) - startedAt),
+    });
     scoreSubmitted = true;
     submitStatusEl.textContent = result.online
       ? "온라인 랭킹에 등록되었습니다!"
       : "로컬 랭킹에 저장되었습니다 (온라인 랭킹 미설정)";
   } catch (err) {
     console.error(err);
-    submitStatusEl.textContent = "등록에 실패했습니다. 다시 시도해주세요.";
+    submitStatusEl.textContent = `등록 실패: ${err.message}`;
     submitScoreBtn.disabled = false;
   }
 }
@@ -290,12 +310,20 @@ async function openRanking() {
   rankingList.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
   try {
     const { online, scores } = await fetchTopScores();
+    const next = getNextReset();
+    const resetNote = `매일 오후 5:30 초기화 · 다음 초기화 ${next.toLocaleString("ko-KR", {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
     rankingSourceNote.textContent = online
-      ? "온라인 공유 랭킹"
-      : "로컬 랭킹 (이 브라우저에만 저장됨 · firebase-config.js 설정 시 온라인 공유 가능)";
+      ? `온라인 공유 랭킹 · ${resetNote}`
+      : `로컬 랭킹 (이 브라우저에만 저장됨) · ${resetNote}`;
 
     if (!scores || scores.length === 0) {
-      rankingList.innerHTML = '<li class="ranking-empty">아직 등록된 기록이 없습니다.</li>';
+      rankingList.innerHTML =
+        '<li class="ranking-empty">이번 회차에 등록된 기록이 아직 없습니다.</li>';
       return;
     }
 
@@ -390,6 +418,105 @@ paleToggle.addEventListener("change", () => {
 bgmToggle.addEventListener("change", () => {
   if (bgmToggle.checked) startBgm();
   else stopBgm();
+});
+
+const onlineCountEl = document.getElementById("online-count");
+const nickLabelEl = document.getElementById("nick-label");
+const nickSetupEl = document.getElementById("nick-setup");
+const nickInput = document.getElementById("nick-input");
+const nickSaveBtn = document.getElementById("nick-save-btn");
+const chatListEl = document.getElementById("chat-list");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+const chatSendBtn = document.getElementById("chat-send");
+const chatStatusEl = document.getElementById("chat-status");
+
+function formatChatTime(createdAt) {
+  if (!createdAt?.seconds) return "";
+  const d = new Date(createdAt.seconds * 1000);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function renderNickname() {
+  const nick = getNickname();
+  const hasNick = nick.length > 0;
+
+  nickLabelEl.textContent = hasNick ? nick : "닉네임 미설정";
+  nickLabelEl.parentElement.classList.toggle("is-set", hasNick);
+  nickSetupEl.hidden = hasNick;
+  chatInput.disabled = !hasNick;
+  chatSendBtn.disabled = !hasNick;
+  chatInput.placeholder = hasNick ? "메시지 입력" : "닉네임을 먼저 정하세요";
+}
+
+function renderMessages(list) {
+  if (list === null) {
+    chatListEl.innerHTML = '<li class="chat-empty">채팅 서버에 연결할 수 없습니다.</li>';
+    return;
+  }
+  if (list.length === 0) {
+    chatListEl.innerHTML = '<li class="chat-empty">아직 대화가 없습니다.</li>';
+    return;
+  }
+
+  const myNick = getNickname();
+  chatListEl.innerHTML = list
+    .map((m) => {
+      const mine = myNick && m.name === myNick ? " is-mine" : "";
+      const time = formatChatTime(m.createdAt);
+      return `<li class="${mine.trim()}">
+        <span class="chat-name">${escapeHtml(m.name ?? "익명")}</span>${escapeHtml(m.text ?? "")}${
+        time ? `<span class="chat-time">${time}</span>` : ""
+      }
+      </li>`;
+    })
+    .join("");
+  chatListEl.scrollTop = chatListEl.scrollHeight;
+}
+
+function saveNicknameFromInput() {
+  const value = nickInput.value.trim();
+  if (!value) {
+    chatStatusEl.textContent = "닉네임을 입력해주세요.";
+    return;
+  }
+  setNickname(value);
+  nickInput.value = "";
+  chatStatusEl.textContent = "";
+  renderNickname();
+  chatInput.focus();
+}
+
+nickSaveBtn.addEventListener("click", saveNicknameFromInput);
+nickInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") saveNicknameFromInput();
+});
+
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = chatInput.value.trim();
+  const nick = getNickname();
+  if (!text || !nick) return;
+
+  chatSendBtn.disabled = true;
+  chatInput.value = "";
+  try {
+    await sendMessage(nick, text);
+    chatStatusEl.textContent = "";
+  } catch (err) {
+    console.error(err);
+    chatStatusEl.textContent = "전송에 실패했습니다.";
+    chatInput.value = text;
+  } finally {
+    chatSendBtn.disabled = !getNickname();
+    chatInput.focus();
+  }
+});
+
+renderNickname();
+watchMessages(renderMessages);
+startPresence((count) => {
+  onlineCountEl.textContent = count === null ? "–" : `${count}명`;
 });
 
 buildGrid();

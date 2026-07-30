@@ -1,16 +1,51 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 점수 기록은 등록만 가능하고 이후 수정·삭제가 불가능하다.
+    // 브라우저에서 함수를 직접 호출하더라도 아래 조건을 만족하지 못하면 거부된다.
     match /scores/{doc} {
       allow read: if true;
-      allow create: if request.resource.data.name is string
+      allow create: if request.resource.data.keys().hasOnly(
+          ['name', 'score', 'clears', 'durationMs', 'createdAt']
+        )
+        && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 12
         && request.resource.data.score is number
         && request.resource.data.score >= 0
-        && request.resource.data.score <= 170;
+        && request.resource.data.score <= 170
+        && request.resource.data.clears is number
+        && request.resource.data.clears >= 0
+        // 한 번에 지울 수 있는 사과는 2~10개이므로 점수와 매칭 횟수는 이 범위 안에 있어야 한다
+        && request.resource.data.clears * 2 <= request.resource.data.score
+        && request.resource.data.clears * 10 >= request.resource.data.score
+        && request.resource.data.durationMs is number
+        && request.resource.data.durationMs <= 125000
+        // 사과 한 개당 최소 0.15초는 걸린다고 보고, 즉시 등록되는 기록을 막는다
+        && request.resource.data.durationMs >= request.resource.data.score * 150
+        // 클라이언트가 임의의 시각을 써 넣지 못하도록 서버 시각만 허용한다
+        && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
+    match /messages/{doc} {
+      allow read: if true;
+      allow create: if request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 12
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 200
+        && request.resource.data.keys().hasOnly(['name', 'text', 'createdAt'])
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // 접속자 수 집계용 단일 문서. 각 클라이언트가 자기 항목만 갱신한다.
+    match /meta/presence {
+      allow read: if true;
+      allow write: if true;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
