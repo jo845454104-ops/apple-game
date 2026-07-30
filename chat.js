@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=17";
-import { isClean, findProfanity, findTargeted } from "./profanity.js?v=17";
-import { getFingerprint } from "./fingerprint.js?v=17";
+import { getFirestoreApi } from "./firebase-app.js?v=18";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=18";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=18";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -16,7 +16,7 @@ const CLIENT_ID_KEY = "apple-game-client-id";
 const HEARTBEAT_MS = 30000;
 const POLL_MS = 15000;
 const ONLINE_WINDOW_MS = 75000;
-const STALE_MS = 15 * 60 * 1000;
+const STALE_MS = 5 * 60 * 1000;
 
 // 새로고침할 때마다 새 ID를 만들면 같은 사람이 여러 명으로 집계된다.
 // 브라우저에 저장해두고 계속 같은 ID를 쓴다.
@@ -140,7 +140,7 @@ export async function reportCheat(reason, name) {
   // 저장소를 지우거나 시크릿 창으로 와도 같은 기기면 지문으로 다시 걸린다
   const ids = [clientId];
   try {
-    ids.push(await getFingerprint());
+    ids.push(await getFingerprint(), await getHardwareFingerprint());
   } catch {
     /* 지문을 못 만들어도 기기 ID로는 남긴다 */
   }
@@ -154,7 +154,7 @@ export async function reportCheat(reason, name) {
 }
 
 // 운영자가 접속자 목록에서 특정 기기를 즉시 차단한다.
-export async function blockClient(targetId, name, fingerprint) {
+export async function blockClient(targetId, name, fingerprint, hardware) {
   const ctx = await getFirestoreApi();
   if (!ctx) throw new Error("서버에 연결되어 있지 않습니다.");
   const { db, api } = ctx;
@@ -163,7 +163,7 @@ export async function blockClient(targetId, name, fingerprint) {
     name: String(name || "").slice(0, 12),
     createdAt: api.serverTimestamp(),
   };
-  const ids = fingerprint ? [targetId, fingerprint] : [targetId];
+  const ids = [targetId, fingerprint, hardware].filter(Boolean);
   await Promise.all(
     ids.map((id) => api.setDoc(api.doc(db, "blocked", id), payload))
   );
@@ -185,7 +185,7 @@ export async function isBlockedOnServer() {
   const { db, api } = ctx;
   const ids = [clientId];
   try {
-    ids.push(await getFingerprint());
+    ids.push(await getFingerprint(), await getHardwareFingerprint());
   } catch {
     /* 지문 실패 시 기기 ID로만 확인한다 */
   }
@@ -227,7 +227,9 @@ export async function reserveNickname(name) {
   if (!ctx) return { ok: true, offline: true };
 
   const { db, api } = ctx;
-  const ref = api.doc(db, "nicknames", trimmed);
+  // 점·공백을 끼워 넣어 남의 닉네임을 가져가는 것을 막기 위해
+  // 기호를 뺀 형태를 예약 키로 쓴다.
+  const ref = api.doc(db, "nicknames", nicknameKey(trimmed));
 
   const existing = await api.getDoc(ref).catch(() => null);
   if (existing?.exists()) {
@@ -375,14 +377,16 @@ export async function startPresence(onCount) {
       // 접속자 목록에 이름을 띄우기 위해 닉네임도 함께 보낸다
       const nick = getNickname();
       let fp = "";
+      let hw = "";
       try {
         fp = await getFingerprint();
+        hw = await getHardwareFingerprint();
       } catch {
         /* 지문 없이도 접속자 수는 집계된다 */
       }
       await api.setDoc(
         ref,
-        { clients: { [clientId]: { t: Date.now(), n: nick, f: fp } } },
+        { clients: { [clientId]: { t: Date.now(), n: nick, f: fp, h: hw } } },
         { merge: true }
       );
     } catch (err) {
@@ -398,14 +402,25 @@ export async function startPresence(onCount) {
       const stale = [];
       const online = [];
 
+      // 형식에 맞지 않는 항목은 누가 임의로 심은 가짜다
+      const looksReal = (id, ts) =>
+        /^[a-z0-9]{12,32}$/.test(id) &&
+        Number.isFinite(Number(ts)) &&
+        Math.abs(now - Number(ts)) < 24 * 60 * 60 * 1000;
+
       Object.entries(clients).forEach(([id, value]) => {
         // 예전 형식은 값이 숫자 하나였다
         const ts = typeof value === "object" && value !== null ? value.t : value;
         const nick = typeof value === "object" && value !== null ? value.n : "";
         const fp = typeof value === "object" && value !== null ? value.f : "";
+        const hw = typeof value === "object" && value !== null ? value.h : "";
+        if (!looksReal(id, ts)) {
+          stale.push(id);
+          return;
+        }
         const age = now - Number(ts);
         if (age < ONLINE_WINDOW_MS) {
-          online.push({ id, fp: fp || "", name: nick || "", isMe: id === clientId });
+          online.push({ id, fp: fp || "", hw: hw || "", name: nick || "", isMe: id === clientId });
         } else if (age > STALE_MS) {
           stale.push(id);
         }

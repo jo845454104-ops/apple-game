@@ -1,4 +1,4 @@
-import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=17";
+import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js?v=18";
 
 const SDK_VERSION = "10.13.2";
 

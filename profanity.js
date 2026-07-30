@@ -68,5 +68,11 @@ export function findTargeted(text) {
   return matchIn(TARGETED, text);
 }
 
+// 닉네임 선점 비교용 키. "진.짜.문창호"와 "진짜문창호"가 같은 이름으로 취급된다.
+export function nicknameKey(text) {
+  const cleaned = normalize(text);
+  return cleaned || String(text).trim().slice(0, 12);
+}
+
 export const BANNED_WORDS = BANNED;
 export const TARGETED_WORDS = TARGETED;

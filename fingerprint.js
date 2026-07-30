@@ -81,6 +81,27 @@ async function sha256(text) {
     .join("");
 }
 
+let cachedHw = null;
+
+// 브라우저를 바꿔도 유지되는 값만 모은 하드웨어 지문.
+// GPU 모델·화면 규격·CPU 코어 수는 같은 PC라면 크롬이든 엣지든 동일하다.
+// 다만 같은 기종을 여러 대 쓰는 환경(학원 실습실 등)에서는 서로 겹칠 수 있다.
+export async function getHardwareFingerprint() {
+  if (cachedHw) return cachedHw;
+  const parts = [
+    webglSignature(),
+    screen.width + "x" + screen.height + "x" + screen.colorDepth,
+    screen.availWidth + "x" + screen.availHeight,
+    navigator.hardwareConcurrency ?? "",
+    navigator.deviceMemory ?? "",
+    navigator.platform ?? "",
+    navigator.maxTouchPoints ?? "",
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+  ];
+  cachedHw = "hw" + (await sha256(parts.join("|"))).slice(0, 22);
+  return cachedHw;
+}
+
 let cached = null;
 
 export async function getFingerprint() {

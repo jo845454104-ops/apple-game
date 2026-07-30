@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=17";
-import { findTargeted } from "./profanity.js?v=17";
+import { submitScore, fetchTopScores, getNextReset } from "./leaderboard.js?v=18";
+import { findTargeted } from "./profanity.js?v=18";
 import {
   getNickname,
   setNickname,
@@ -15,7 +15,7 @@ import {
   blockClient,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=17";
+} from "./chat.js?v=18";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -657,7 +657,7 @@ function renderOnlineList() {
       const me = u.isMe ? '<span class="online-list__me">나</span>' : "";
       const btn = u.isMe
         ? ""
-        : `<button type="button" class="block-btn" data-id="${escapeHtml(u.id)}" data-name="${escapeHtml(u.name)}" data-fp="${escapeHtml(u.fp || "")}">차단</button>`;
+        : `<button type="button" class="block-btn" data-id="${escapeHtml(u.id)}" data-name="${escapeHtml(u.name)}" data-fp="${escapeHtml(u.fp || "")}" data-hw="${escapeHtml(u.hw || "")}">차단</button>`;
       return `<li><span class="rank">${i + 1}</span><span class="name">${name}</span>${me}${btn}</li>`;
     })
     .join("");
@@ -676,7 +676,7 @@ onlineListEl.addEventListener("click", async (e) => {
   btn.disabled = true;
   btn.textContent = "차단 중";
   try {
-    await blockClient(id, name, btn.dataset.fp);
+    await blockClient(id, name, btn.dataset.fp, btn.dataset.hw);
     btn.textContent = "차단됨";
     renderBlockedList();
   } catch (err) {
