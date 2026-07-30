@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=27";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=27";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=27";
+import { getFirestoreApi } from "./firebase-app.js?v=28";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=28";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=28";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -339,6 +339,13 @@ export function checkMessage(text) {
 export async function sendMessage(nickname, text) {
   const problem = checkMessage(text);
   if (problem) throw new Error(problem);
+  // 기기 ID를 새로 만들어도 지문으로 걸리도록 함께 보낸다
+  let fp = "";
+  try {
+    fp = await getFingerprint();
+  } catch {
+    /* 지문 생성 실패 시에도 전송은 진행한다 */
+  }
   const ctx = await getFirestoreApi();
   if (!ctx) throw new Error("채팅 서버에 연결되어 있지 않습니다.");
   const { db, api } = ctx;
@@ -349,6 +356,7 @@ export async function sendMessage(nickname, text) {
     cid: clientId,
     // 서버가 닉네임 소유권을 확인할 수 있도록 예약 키를 함께 보낸다
     nk: nicknameKey(nickname),
+    fp,
     createdAt: api.serverTimestamp(),
   });
   lastSentAt = Date.now();

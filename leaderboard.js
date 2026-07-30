@@ -1,5 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=27";
-import { getClientId } from "./chat.js?v=27";
+import { getFirestoreApi } from "./firebase-app.js?v=28";
+import { getClientId } from "./chat.js?v=28";
+import { getFingerprint } from "./fingerprint.js?v=28";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
@@ -87,6 +88,7 @@ export async function submitScore(name, score, meta = {}) {
       clears,
       durationMs,
       cid: getClientId(),
+      fp: await getFingerprint().catch(() => ""),
       createdAt: api.serverTimestamp(),
     });
     return { online: true };
