@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=32";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=32";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=32";
+import { getFirestoreApi } from "./firebase-app.js?v=33";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=33";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=33";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -145,30 +145,24 @@ export async function reportCheat(reason, name) {
   } catch {
     /* 지문을 못 만들어도 기기 ID로는 남긴다 */
   }
+  // 차단 등록은 운영자만 할 수 있다(웹 쓰기는 규칙에서 막혀 있다).
+  // 여기서는 실패해도 조용히 넘어가고, 화면 잠금은 로컬에서 처리한다.
   await Promise.all(
-    ids.map((id) =>
-      api.setDoc(api.doc(db, "blocked", id), payload).catch((err) => {
-        console.error("차단 기록 실패", err);
-      })
-    )
+    ids.map((id) => api.setDoc(api.doc(db, "blocked", id), payload).catch(() => {}))
   );
 }
 
 // 운영자가 접속자 목록에서 특정 기기를 즉시 차단한다.
-export async function blockClient(targetId, name, fingerprint, hardware) {
-  const ctx = await getFirestoreApi();
-  if (!ctx) throw new Error("서버에 연결되어 있지 않습니다.");
-  const { db, api } = ctx;
-  const payload = {
-    reason: "운영자 차단",
-    name: String(name || "").slice(0, 12),
-    createdAt: api.serverTimestamp(),
-  };
-  // hardware 지문은 동일 기종끼리 겹쳐 오폭하므로 차단에 쓰지 않는다
-  const ids = [targetId, fingerprint].filter(Boolean);
-  await Promise.all(
-    ids.map((id) => api.setDoc(api.doc(db, "blocked", id), payload))
-  );
+// 차단은 운영자 도구로만 가능하다. 웹에서 바로 차단할 수 있게 두면
+// 접속자 목록에 공개된 기기 ID로 누구나 남을 차단할 수 있기 때문이다.
+// 여기서는 차단 대상 ID만 알려주고, 실제 등록은 Firebase 콘솔에서 한다.
+export function blockTargets(targetId, fingerprint) {
+  return [targetId, fingerprint].filter(Boolean);
+}
+
+// 내 당첨권 조회용
+export function myClientId() {
+  return clientId;
 }
 
 // 운영자용: 최근 채팅을 가져온다 (삭제 대상 선택용)

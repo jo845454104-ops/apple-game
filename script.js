@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=32";
-import { findTargeted } from "./profanity.js?v=32";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=33";
+import { findTargeted } from "./profanity.js?v=33";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -9,8 +9,10 @@ import {
   watchPrizes,
   remainingSpins,
   nextResetAt,
-} from "./roulette.js?v=32";
-import { nicknameKey } from "./profanity.js?v=32";
+  fetchMyPrizes,
+  PRIZES,
+} from "./roulette.js?v=33";
+import { nicknameKey } from "./profanity.js?v=33";
 import {
   getNickname,
   setNickname,
@@ -26,10 +28,10 @@ import {
   fetchRecentMessages,
   fetchChatLocked,
   deleteMessages,
-  blockClient,
+  blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=32";
+} from "./chat.js?v=33";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -708,9 +710,15 @@ rouletteSpinBtn.addEventListener("click", async () => {
 
   const prize = drawPrize();
   const seg = SEGMENTS.find((s) => s.id === prize.id);
-  // 바늘(위쪽)이 당첨 구간 한가운데에 오도록 회전각을 맞춘다
+  // 바늘(위쪽)이 당첨 구간 한가운데에 오도록 회전각을 맞춘다.
+  // 현재 각도에서의 "차이"만큼 더해야 한다. 목표각을 그냥 더하면
+  // 두 번째 회전부터 이전 목표각이 누적돼 다른 칸에 멈춘다.
   const target = seg.start + seg.angle / 2;
-  wheelAngle += 360 * 6 + (360 - target);
+  const current = ((wheelAngle % 360) + 360) % 360;
+  const desired = ((360 - target) % 360 + 360) % 360;
+  let delta = desired - current;
+  if (delta < 0) delta += 360;
+  wheelAngle += 360 * 6 + delta;
 
   wheelEl.style.transition = "transform 4s cubic-bezier(0.15, 0.9, 0.2, 1)";
   wheelEl.style.transform = `rotate(${wheelAngle}deg)`;
@@ -770,6 +778,58 @@ function renderTicker(list) {
 }
 
 watchPrizes(renderTicker, 20);
+
+// ── 내 당첨권 ──────────────────────────────
+const myPrizeBtn = document.getElementById("myprize-btn");
+const myPrizeModal = document.getElementById("myprize-modal");
+const myPrizeClose = document.getElementById("myprize-close");
+const myPrizeListEl = document.getElementById("myprize-list");
+const myPrizeNoteEl = document.getElementById("myprize-note");
+
+const EMOJI = Object.fromEntries(PRIZES.map((p) => [p.label, p.emoji]));
+
+async function renderMyPrizes() {
+  const nick = getNickname();
+  if (!nick) {
+    myPrizeNoteEl.textContent = "닉네임을 먼저 정하세요.";
+    myPrizeListEl.innerHTML = "";
+    return;
+  }
+  myPrizeListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
+  const list = await fetchMyPrizes(nicknameKey(nick));
+  const reset = nextResetAt().toLocaleString("ko-KR", {
+    month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+  const won = list.filter((r) => r.prize && r.prize !== "꽝");
+  myPrizeNoteEl.textContent = `${nick} · 오늘 ${list.length}/${DAILY_SPINS}회 사용 · ${reset}에 초기화`;
+
+  if (won.length === 0) {
+    myPrizeListEl.innerHTML =
+      '<li class="ranking-empty">아직 당첨된 경품이 없습니다.</li>';
+    return;
+  }
+  myPrizeListEl.innerHTML = won
+    .map(
+      (r, i) => `<li>
+        <span class="rank">${i + 1}</span>
+        <span class="name">${EMOJI[r.prize] || "🎁"} ${escapeHtml(r.prize)}
+          <span class="online-list__code">${r.score}점 달성 · ${r.n}번째 룰렛</span>
+        </span>
+      </li>`
+    )
+    .join("");
+}
+
+myPrizeBtn.addEventListener("click", () => {
+  myPrizeModal.hidden = false;
+  renderMyPrizes();
+});
+myPrizeClose.addEventListener("click", () => {
+  myPrizeModal.hidden = true;
+});
+myPrizeModal.addEventListener("click", (e) => {
+  if (e.target === myPrizeModal) myPrizeModal.hidden = true;
+});
 
 const onlineCountEl = document.getElementById("online-count");
 const onlineBtn = document.getElementById("online-btn");
@@ -1018,19 +1078,17 @@ onlineBtn.addEventListener("click", () => {
 onlineListEl.addEventListener("click", async (e) => {
   const btn = e.target.closest(".block-btn");
   if (!btn || !isAdmin()) return;
-  const id = btn.dataset.id;
-  const name = btn.dataset.name;
-  btn.disabled = true;
-  btn.textContent = "차단 중";
+  // 차단 등록은 웹에서 못 한다(누구나 남을 차단할 수 있게 되므로).
+  // 대상 ID를 복사해 Firebase 콘솔의 blocked 컬렉션에 넣으면 된다.
+  const ids = blockTargets(btn.dataset.id, btn.dataset.fp);
   try {
-    await blockClient(id, name, btn.dataset.fp, btn.dataset.hw);
-    btn.textContent = "차단됨";
-    renderBlockedList();
-  } catch (err) {
-    console.error(err);
-    btn.textContent = "실패";
-    btn.disabled = false;
+    await navigator.clipboard.writeText(ids.join("\n"));
+    adminStatusEl.textContent = `차단 대상 ID ${ids.length}개를 복사했습니다. Firebase 콘솔 blocked 컬렉션에 문서 ID로 추가하세요.`;
+  } catch {
+    adminStatusEl.textContent = ids.join(" / ");
   }
+  adminUnblockCmdEl.textContent = ids.join("\n");
+  btn.textContent = "ID 복사됨";
 });
 
 onlinePwBtn.addEventListener("click", checkAdminPassword);

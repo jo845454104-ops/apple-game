@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=32";
-import { getClientId } from "./chat.js?v=32";
-import { getFingerprint } from "./fingerprint.js?v=32";
+import { getFirestoreApi } from "./firebase-app.js?v=33";
+import { getClientId } from "./chat.js?v=33";
+import { getFingerprint } from "./fingerprint.js?v=33";
 
 export const ROULETTE_MIN_SCORE = 100;
 export const DAILY_SPINS = 3;
@@ -110,6 +110,22 @@ export async function recordPrize(name, nickKey, prize, score) {
     }
   }
   return { ok: false, reason: "오늘 룰렛 기회를 모두 사용했습니다." };
+}
+
+// 내 닉네임으로 이번 회차에 받은 당첨권을 가져온다.
+export async function fetchMyPrizes(nickKey) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return [];
+  const { db, api } = ctx;
+  const period = periodKey();
+  const out = [];
+  for (let n = 1; n <= DAILY_SPINS; n += 1) {
+    const snap = await api
+      .getDoc(api.doc(db, "rewards", `${nickKey}__${period}__${n}`))
+      .catch(() => null);
+    if (snap?.exists()) out.push({ n, ...snap.data() });
+  }
+  return out;
 }
 
 export async function fetchRecentPrizes(limit = 20) {

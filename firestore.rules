@@ -101,15 +101,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // 조작이 감지된 기기 목록. 본인 기기를 등록할 수만 있고 지울 수는 없다.
+    // 차단 목록.
+    // 웹에서 쓰기를 허용하면 접속자 목록에 공개된 기기 ID로
+    // 누구나 남을(심지어 참가자 전원을) 차단할 수 있다.
+    // 그래서 조회만 열고, 등록·해제는 운영자 도구(CLI/콘솔)로만 한다.
     match /blocked/{clientId} {
       allow read: if true;
-      allow create: if request.resource.data.keys().hasOnly(['reason', 'name', 'createdAt'])
-        && request.resource.data.name is string
-        && request.resource.data.reason is string
-        && request.resource.data.reason.size() <= 200
-        && request.resource.data.createdAt == request.time;
-      allow update, delete: if false;
+      allow write: if false;
     }
 
     // 룰렛 회차 구분. 한국시간 18시(UTC 9시)에 하루가 바뀐다.
@@ -148,6 +146,9 @@ service cloud.firestore {
         && request.resource.data.cid is string
         && notBlocked(request.resource.data.cid)
         && notBlocked(request.resource.data.get('fp', 'none'))
+        // 그 닉네임을 선점한 기기만 그 닉네임으로 룰렛을 돌릴 수 있다.
+        // 없으면 남의 닉네임으로 하루 3회를 대신 소진시킬 수 있다.
+        && ownsNickname(request.resource.data.nk, request.resource.data.cid)
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
@@ -158,10 +159,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // 접속자 수 집계용 단일 문서. 각 클라이언트가 자기 항목만 갱신한다.
+    // 접속자 수 집계용 단일 문서.
+    // 개별 항목까지는 규칙으로 검증할 수 없지만, 문서를 통째로 지우거나
+    // 엉뚱한 필드를 심는 것은 막는다.
     match /meta/presence {
       allow read: if true;
-      allow write: if true;
+      allow create, update: if request.resource.data.keys().hasOnly(['clients'])
+        && request.resource.data.clients is map;
+      allow delete: if false;
     }
 
     match /{document=**} {
