@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=33";
-import { findTargeted } from "./profanity.js?v=33";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=36";
+import { findTargeted } from "./profanity.js?v=36";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=33";
-import { nicknameKey } from "./profanity.js?v=33";
+} from "./roulette.js?v=36";
+import { nicknameKey } from "./profanity.js?v=36";
 import {
   getNickname,
   setNickname,
@@ -31,7 +31,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=33";
+} from "./chat.js?v=36";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -483,6 +483,10 @@ function stopBgm() {
 }
 
 boardEl.addEventListener("pointerdown", handlePointerDown);
+// 모바일: 게임판 위에서 손가락을 끌 때 화면이 스크롤되거나
+// 두 손가락 확대가 걸리면 드래그 선택이 끊긴다.
+boardEl.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+boardEl.addEventListener("gesturestart", (e) => e.preventDefault());
 // 드래그 도중 숫자가 텍스트로 선택되는 것을 막는다
 boardEl.addEventListener("selectstart", (e) => e.preventDefault());
 boardEl.addEventListener("dragstart", (e) => e.preventDefault());

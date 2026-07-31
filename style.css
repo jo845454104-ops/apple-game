@@ -1365,3 +1365,292 @@ body {
   font-size: 11px;
   color: var(--slate-400);
 }
+
+/* ── 모바일 레이아웃 ─────────────────────────
+   좁은 화면에서는 게임판을 최대한 넓게 쓰고, 머리말과 여백을 줄여
+   한 화면에 게임판과 채팅이 함께 들어오도록 한다. */
+@media (max-width: 720px) {
+  html,
+  body {
+    /* 게임판을 드래그할 때 화면이 함께 끌려가거나
+       당겨서 새로고침이 걸리는 것을 막는다 */
+    overscroll-behavior: none;
+  }
+
+  body {
+    padding: 8px;
+    align-items: flex-start;
+  }
+
+  /* 손가락으로 눌렀을 때 파란 하이라이트가 뜨지 않게 */
+  .apple,
+  .board-inner,
+  .ghost-btn,
+  .play-btn,
+  .theme-btn,
+  .online-chip {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 터치 목표를 키워 오조작을 줄인다 */
+  .ghost-btn,
+  .play-btn {
+    min-height: 40px;
+  }
+
+  .chat-form input,
+  .nick-setup input,
+  .name-row input {
+    /* iOS는 16px 미만이면 입력할 때 화면을 확대한다 */
+    font-size: 16px;
+    min-height: 40px;
+  }
+
+  .wrap {
+    gap: 8px;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    padding: 3px 10px;
+    margin-bottom: 4px;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  /* 좁은 화면에서는 설명이 자리를 많이 차지해 감춘다 */
+  .subtitle {
+    display: none;
+  }
+
+  .hud {
+    gap: 6px;
+  }
+
+  .hud__box {
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 5px 8px;
+    border-radius: 12px;
+  }
+
+  .hud__label {
+    font-size: 10px;
+  }
+
+  .hud__value {
+    font-size: 17px;
+  }
+
+  .ghost-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+  }
+
+  /* 게임판: 화면 폭을 꽉 채워 사과를 최대한 크게 만든다 */
+  .board-frame {
+    padding: 8px;
+    border-radius: 14px;
+    gap: 8px;
+  }
+
+  .board-inner {
+    padding: 6px;
+    border-radius: 10px;
+    background-size: 20px 20px;
+  }
+
+  .apple-grid {
+    gap: 2px;
+  }
+
+  .apple {
+    font-size: clamp(8px, 2.6vw, 14px);
+  }
+
+  .apple span {
+    transform: translateY(10%);
+  }
+
+  .side-timer {
+    height: 14px;
+    gap: 8px;
+  }
+
+  .side-timer__score {
+    font-size: 15px;
+  }
+
+  /* 채팅은 게임판 아래에 적당한 높이로 */
+  .chat-panel {
+    padding: 10px 10px 8px;
+    border-radius: 14px;
+    max-height: none;
+  }
+
+  /* flex 자식이라 높이를 정해주지 않으면 0으로 접힌다 */
+  .chat-list {
+    flex: 0 0 auto;
+    height: 130px;
+    max-height: 130px;
+    padding: 8px 2px;
+  }
+
+  .chat-panel__title {
+    font-size: 13px;
+  }
+
+  .nick-setup__note {
+    font-size: 10px;
+  }
+
+  /* 하단 옵션 줄바꿈 */
+  .board-footer {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .online-chip {
+    margin-right: 0;
+  }
+
+  .online-chip,
+  .theme-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .opt-toggle {
+    font-size: 12px;
+  }
+
+  .footer-note {
+    font-size: 10px;
+  }
+
+  .prize-ticker {
+    padding: 5px 10px;
+  }
+
+  .prize-ticker__track {
+    font-size: 11px;
+    gap: 14px;
+  }
+
+  /* 팝업들이 화면을 넘지 않게 */
+  .modal__card,
+  .overlay__card,
+  .entry-gate__card,
+  .roulette__card,
+  .lockout__card {
+    padding: 18px 16px;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+
+  .wheel-wrap {
+    width: 170px;
+    height: 170px;
+  }
+
+  .roulette__congrats {
+    font-size: 16px;
+  }
+
+  .overlay__title {
+    font-size: 17px;
+  }
+}
+
+/* 아주 좁은 화면(구형 폰) */
+@media (max-width: 400px) {
+  .title {
+    font-size: 18px;
+  }
+
+  .hud__value {
+    font-size: 15px;
+  }
+
+  .apple-grid {
+    gap: 1.5px;
+  }
+
+  .chat-list {
+    flex: 0 0 auto;
+    height: 110px;
+    max-height: 110px;
+  }
+}
+
+/* 가로로 눕힌 폰: 게임판을 크게 두고 채팅을 옆으로 */
+@media (max-width: 900px) and (orientation: landscape) {
+  .subtitle,
+  .eyebrow,
+  .footer-note {
+    display: none;
+  }
+
+  .stage {
+    flex-direction: row;
+  }
+
+  /* 세로 화면용 계산식(100vh - 265px)을 그대로 쓰면 눕혔을 때
+     게임판이 극단적으로 작아진다. 가로 전용으로 다시 계산한다. */
+  .board-frame {
+    flex-direction: row;
+    flex: 0 1 calc((100vh - 120px) * 1.62);
+    max-width: calc((100vh - 120px) * 1.62);
+    padding: 6px;
+  }
+
+  .chat-panel {
+    flex: 0 0 170px;
+    max-height: none;
+  }
+
+  .chat-list {
+    flex: 1 1 0;
+    height: auto;
+    max-height: none;
+  }
+
+  .prize-ticker,
+  .board-footer {
+    display: none;
+  }
+
+  .title {
+    font-size: 15px;
+  }
+
+  .hud__box {
+    padding: 3px 8px;
+  }
+
+  .hud__value {
+    font-size: 14px;
+  }
+
+  .side-timer {
+    flex-direction: column;
+    width: 30px;
+    height: auto;
+  }
+
+  .side-timer__track {
+    width: 12px;
+    height: auto;
+    flex: 1;
+    align-items: flex-end;
+  }
+
+  .side-timer__fill {
+    width: 100%;
+    height: var(--time-pct, 100%) !important;
+  }
+}
