@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>🍎 사과게임 - DSA 아카데미</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=37" />
+  <link rel="stylesheet" href="style.css?v=38" />
   <script>
     // 스타일이 적용되기 전에 테마를 정해 화면이 번쩍이는 것을 막는다.
     try {
@@ -49,6 +49,7 @@
       </div>
       <button type="button" class="ghost-btn" id="ranking-btn">🏆 랭킹</button>
       <button type="button" class="ghost-btn" id="myprize-btn">🎫 내 당첨권</button>
+      <button type="button" class="ghost-btn" id="mystats-btn">📊 내 기록실</button>
       <button type="button" class="ghost-btn" id="reset-btn">Reset</button>
     </div>
 
@@ -205,6 +206,35 @@
     </div>
   </div>
 
+  <div class="modal" id="mystats-modal" hidden>
+    <div class="modal__card">
+      <div class="modal__header">
+        <h2>📊 내 기록실</h2>
+        <button type="button" class="modal__close" id="mystats-close">&times;</button>
+      </div>
+      <p class="modal__status" id="mystats-note"></p>
+      <div class="stat-grid" id="stat-grid"></div>
+      <h3 class="admin-subtitle">최근 기록</h3>
+      <ol class="ranking-list" id="mystats-list"></ol>
+    </div>
+  </div>
+
+  <div class="modal" id="replay-modal" hidden>
+    <div class="modal__card">
+      <div class="modal__header">
+        <h2>🎬 리플레이 검증</h2>
+        <button type="button" class="modal__close" id="replay-close">&times;</button>
+      </div>
+      <p class="modal__status" id="replay-note"></p>
+      <div class="replay-board" id="replay-board"></div>
+      <div class="replay-controls">
+        <button type="button" class="admin-btn" id="replay-play">▶ 재생</button>
+        <span class="replay-time" id="replay-time">0.0초</span>
+      </div>
+      <p class="admin-hint" id="replay-verdict"></p>
+    </div>
+  </div>
+
   <div class="modal" id="myprize-modal" hidden>
     <div class="modal__card">
       <div class="modal__header">
@@ -274,6 +304,6 @@
 
   <!-- v 값은 파일을 고칠 때마다 올린다. 브라우저 캐시 때문에 HTML만 새것이고
        스크립트는 옛것인 상태가 생기지 않도록 모든 모듈에 같은 값을 붙인다. -->
-  <script type="module" src="script.js?v=37"></script>
+  <script type="module" src="script.js?v=38"></script>
 </body>
 </html>

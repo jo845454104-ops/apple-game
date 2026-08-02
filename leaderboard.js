@@ -1,36 +1,54 @@
-import { getFirestoreApi } from "./firebase-app.js?v=37";
-import { getClientId } from "./chat.js?v=37";
-import { getFingerprint } from "./fingerprint.js?v=37";
+import { getFirestoreApi } from "./firebase-app.js?v=38";
+import { getClientId } from "./chat.js?v=38";
+import { getFingerprint } from "./fingerprint.js?v=38";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
 const TOP_N = 10;
 
-// 랭킹은 매일 한국시간 18:00에 초기화된다. 룰렛 회차와 같은 기준이다. 기록을 지우는 대신
-// 직전 17:30 이후에 등록된 기록만 보여주는 방식이라 예약 작업이 필요 없다.
+// 랭킹은 한국시간 18:00에 초기화되지만 월·화·수·목에만 한다.
+// 금요일과 주말에는 초기화하지 않으므로 목요일 18시 기록이 월요일 18시까지 이어진다.
+// 기록을 실제로 지우는 대신 "직전 초기화 이후 기록만 보여주는" 방식이라 예약 작업이 필요 없다.
 const RESET_HOUR_KST = 18;
-const RESET_MINUTE_KST = 0;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function getResetCutoff() {
-  const now = Date.now();
-  const kstNow = new Date(now + KST_OFFSET_MS);
-  const todayResetKst = Date.UTC(
-    kstNow.getUTCFullYear(),
-    kstNow.getUTCMonth(),
-    kstNow.getUTCDate(),
-    RESET_HOUR_KST,
-    RESET_MINUTE_KST
-  );
-
-  let cutoff = todayResetKst - KST_OFFSET_MS;
-  if (cutoff > now) cutoff -= DAY_MS;
-  return new Date(cutoff);
+// 0=일, 1=월 ... 6=토 → 월~목만 초기화
+function isResetDay(kstDate) {
+  const d = kstDate.getUTCDay();
+  return d >= 1 && d <= 4;
 }
 
-export function getNextReset() {
-  return new Date(getResetCutoff().getTime() + DAY_MS);
+function kstResetMoment(kstDate) {
+  return (
+    Date.UTC(
+      kstDate.getUTCFullYear(),
+      kstDate.getUTCMonth(),
+      kstDate.getUTCDate(),
+      RESET_HOUR_KST
+    ) - KST_OFFSET_MS
+  );
+}
+
+export function getResetCutoff(now = Date.now()) {
+  // 오늘부터 거슬러 올라가며 이미 지나간 월~목 18시 중 가장 최근을 찾는다
+  for (let back = 0; back < 14; back += 1) {
+    const kst = new Date(now + KST_OFFSET_MS - back * DAY_MS);
+    if (!isResetDay(kst)) continue;
+    const moment = kstResetMoment(kst);
+    if (moment <= now) return new Date(moment);
+  }
+  return new Date(now - 14 * DAY_MS);
+}
+
+export function getNextReset(now = Date.now()) {
+  for (let ahead = 0; ahead < 14; ahead += 1) {
+    const kst = new Date(now + KST_OFFSET_MS + ahead * DAY_MS);
+    if (!isResetDay(kst)) continue;
+    const moment = kstResetMoment(kst);
+    if (moment > now) return new Date(moment);
+  }
+  return new Date(now + 14 * DAY_MS);
 }
 
 function readLocalScores() {
@@ -89,6 +107,10 @@ export async function submitScore(name, score, meta = {}) {
       durationMs,
       cid: getClientId(),
       fp: await getFingerprint().catch(() => ""),
+      // 리플레이 검증용. 보드 시드와 수순을 함께 남겨
+      // 상위 기록이 진짜인지 재생해 확인할 수 있게 한다.
+      seed: Number(meta.seed ?? 0),
+      moves: JSON.stringify(meta.moves ?? []).slice(0, 20000),
       createdAt: api.serverTimestamp(),
     });
     return { online: true };
@@ -113,6 +135,24 @@ export async function fetchScoresForAdmin(limit = 50) {
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
     .sort((a, b) => b.score - a.score);
+}
+
+// 내 기록 모아보기. 이름으로 찾되 오늘 회차만 본다.
+export async function fetchMyScores(name, limit = 200) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return [];
+  const { db, api } = ctx;
+  const snap = await api.getDocs(
+    api.query(
+      api.collection(db, COLLECTION_NAME),
+      api.where("createdAt", ">=", api.Timestamp.fromDate(getResetCutoff())),
+      api.orderBy("createdAt", "desc"),
+      api.limit(limit)
+    )
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((r) => r.name === name);
 }
 
 export async function fetchTopScores() {

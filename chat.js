@@ -1,11 +1,11 @@
-import { getFirestoreApi } from "./firebase-app.js?v=37";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=37";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=37";
+import { getFirestoreApi } from "./firebase-app.js?v=38";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=38";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=38";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
-const MESSAGE_MAX_AGE_MS = 2 * 60 * 60 * 1000;
 const PRUNE_INTERVAL_MS = 30000;
+
 const NICK_KEY = "apple-game-nickname";
 
 // 접속자 수는 모두가 주기적으로 신호를 보내야 해서 실시간 리스너를 쓰면
@@ -359,9 +359,9 @@ export async function sendMessage(nickname, text) {
 
 let lastPruneAt = 0;
 
-// 두 가지 기준으로 대화를 정리한다.
-//  1) 올라온 지 2시간이 지난 메시지는 개수와 상관없이 삭제
-//  2) 100개를 넘으면 오래된 것부터 삭제해 100개만 남김
+// 채팅은 시간이 지났다고 지우지 않는다. 100개를 넘을 때만
+// 오래된 것부터 밀어내 항상 최근 100개가 남게 한다.
+// (예전에는 2시간이 지나면 지워서 대화가 통째로 사라지는 문제가 있었다)
 // 규칙상 2분이 지나야 삭제할 수 있어, 방금 오간 대화는 누구도 지울 수 없다.
 async function pruneOldMessages(db, api) {
   const now = Date.now();
@@ -371,19 +371,6 @@ async function pruneOldMessages(db, api) {
   try {
     const coll = api.collection(db, MESSAGES);
     const remove = new Map();
-
-    const expired = await api.getDocs(
-      api.query(
-        coll,
-        api.where(
-          "createdAt",
-          "<",
-          api.Timestamp.fromMillis(now - MESSAGE_MAX_AGE_MS)
-        ),
-        api.limit(100)
-      )
-    );
-    expired.docs.forEach((d) => remove.set(d.id, d.ref));
 
     const countSnap = await api.getCountFromServer(coll);
     const total = countSnap.data().count;

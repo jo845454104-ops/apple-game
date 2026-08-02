@@ -1729,3 +1729,87 @@ body {
   .event-banner__timer { font-size: 15px; }
   .event-banner__flame { font-size: 18px; }
 }
+
+/* ── 내 기록실 ─────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.stat-card {
+  background: var(--bg);
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.stat-card__label {
+  display: block;
+  font-size: 11px;
+  color: var(--slate-400);
+  font-weight: 600;
+}
+
+.stat-card__value {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--slate-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-card--best .stat-card__value {
+  color: var(--accent);
+}
+
+/* ── 리플레이 ──────────────────────────────── */
+.replay-board {
+  display: grid;
+  grid-template-columns: repeat(17, 1fr);
+  gap: 1px;
+  background: var(--bg);
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  padding: 6px;
+  margin-bottom: 10px;
+}
+
+.replay-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--apple-red);
+  border-radius: 50%;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.replay-cell.is-gone {
+  opacity: 0.12;
+  transform: scale(0.6);
+  background: var(--slate-400);
+}
+
+.replay-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.replay-time {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--slate-600);
+}
+
+.replay-verdict--bad {
+  color: var(--apple-red);
+  font-weight: 700;
+}

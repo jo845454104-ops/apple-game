@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=37";
-import { findTargeted } from "./profanity.js?v=37";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=38";
+import { findTargeted } from "./profanity.js?v=38";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=37";
-import { nicknameKey } from "./profanity.js?v=37";
+} from "./roulette.js?v=38";
+import { nicknameKey } from "./profanity.js?v=38";
 import {
   activeEvent,
   nextEvent,
@@ -20,7 +20,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=37";
+} from "./event.js?v=38";
 import {
   getNickname,
   setNickname,
@@ -39,7 +39,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=37";
+} from "./chat.js?v=38";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -90,21 +90,29 @@ let clearEvents = 0;
 let startedAt = 0;
 let finishedAt = 0;
 
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+// 리플레이 검증을 위해 보드를 시드로 만든다.
+// 같은 시드면 언제든 똑같은 배치를 다시 만들 수 있어,
+// 기록된 수순을 그대로 재생해 진짜 플레이인지 확인할 수 있다.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function generateValues(total) {
+export function boardFromSeed(seed, total) {
+  const rand = mulberry32(seed);
   const values = [];
-  for (let i = 0; i < total; i++) {
-    values.push(Math.floor(Math.random() * 9) + 1);
-  }
-  return shuffle(values);
+  for (let i = 0; i < total; i++) values.push(Math.floor(rand() * 9) + 1);
+  return values;
 }
+
+let boardSeed = 0;
+let moves = [];
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60);
@@ -117,7 +125,9 @@ function buildGrid() {
   apples = [];
   clearedCount = 0;
 
-  const values = generateValues(COLS * ROWS);
+  boardSeed = Math.floor(Math.random() * 2147483647);
+  moves = [];
+  const values = boardFromSeed(boardSeed, COLS * ROWS);
 
   values.forEach((value) => {
     const el = document.createElement("div");
@@ -202,6 +212,11 @@ function finalizeSelection() {
   const sum = selected.reduce((acc, a) => acc + a.value, 0);
 
   if (sum === TARGET_SUM && selected.length > 0) {
+    // 리플레이용 수순: [경과 밀리초, 지운 칸 번호들]
+    moves.push([
+      Date.now() - startedAt,
+      selected.map((a) => apples.indexOf(a)),
+    ]);
     selected.forEach((a) => {
       a.cleared = true;
       a.el.classList.remove("is-selecting", "is-match");
@@ -392,6 +407,8 @@ async function handleSubmitScore() {
     const result = await submitScore(name, actualScore, {
       clears: clearEvents,
       durationMs: Math.max(0, (finishedAt || Date.now()) - startedAt),
+      seed: boardSeed,
+      moves,
     });
     scoreSubmitted = true;
     submitStatusEl.textContent = result.online
@@ -813,6 +830,183 @@ function renderTicker(list) {
 
 watchPrizes(renderTicker, 20);
 
+// ── 내 기록실 ──────────────────────────────
+const myStatsBtn = document.getElementById("mystats-btn");
+const myStatsModal = document.getElementById("mystats-modal");
+const myStatsClose = document.getElementById("mystats-close");
+const myStatsNote = document.getElementById("mystats-note");
+const statGridEl = document.getElementById("stat-grid");
+const myStatsListEl = document.getElementById("mystats-list");
+
+async function renderMyStats() {
+  const nick = getNickname();
+  if (!nick) {
+    myStatsNote.textContent = "닉네임을 먼저 정하세요.";
+    statGridEl.innerHTML = "";
+    myStatsListEl.innerHTML = "";
+    return;
+  }
+  myStatsNote.textContent = "불러오는 중...";
+  myStatsListEl.innerHTML = "";
+  const rows = await fetchMyScores(nick);
+
+  if (rows.length === 0) {
+    myStatsNote.textContent = `${nick} · 오늘 기록이 없습니다`;
+    statGridEl.innerHTML = "";
+    return;
+  }
+
+  const scores = rows.map((r) => r.score);
+  const best = Math.max(...scores);
+  const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  const total = scores.reduce((a, b) => a + b, 0);
+
+  myStatsNote.textContent = `${nick} · 오늘 ${rows.length}판`;
+  statGridEl.innerHTML = `
+    <div class="stat-card stat-card--best">
+      <span class="stat-card__label">최고 점수</span>
+      <span class="stat-card__value">${best}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">평균</span>
+      <span class="stat-card__value">${avg}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">플레이 판수</span>
+      <span class="stat-card__value">${rows.length}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-card__label">터뜨린 사과</span>
+      <span class="stat-card__value">${total}</span>
+    </div>`;
+
+  myStatsListEl.innerHTML = rows
+    .slice(0, 20)
+    .map((r, i) => {
+      const at = r.createdAt
+        ? new Date(r.createdAt.seconds * 1000).toLocaleTimeString("ko-KR", {
+            hour: "2-digit", minute: "2-digit",
+          })
+        : "";
+      const replay = r.moves
+        ? `<button type="button" class="block-btn" data-replay="${escapeHtml(r.id)}">리플레이</button>`
+        : "";
+      return `<li>
+        <span class="rank">${i + 1}</span>
+        <span class="name">${r.score}점
+          <span class="online-list__code">매칭 ${r.clears ?? "?"}회 · ${at}</span>
+        </span>${replay}
+      </li>`;
+    })
+    .join("");
+}
+
+myStatsBtn.addEventListener("click", () => {
+  myStatsModal.hidden = false;
+  renderMyStats();
+});
+myStatsClose.addEventListener("click", () => { myStatsModal.hidden = true; });
+myStatsModal.addEventListener("click", (e) => {
+  if (e.target === myStatsModal) myStatsModal.hidden = true;
+});
+
+// ── 리플레이 검증 ──────────────────────────
+const replayModal = document.getElementById("replay-modal");
+const replayClose = document.getElementById("replay-close");
+const replayBoardEl = document.getElementById("replay-board");
+const replayNoteEl = document.getElementById("replay-note");
+const replayPlayBtn = document.getElementById("replay-play");
+const replayTimeEl = document.getElementById("replay-time");
+const replayVerdictEl = document.getElementById("replay-verdict");
+
+let replayData = null;
+let replayTimers = [];
+
+function stopReplay() {
+  replayTimers.forEach((t) => window.clearTimeout(t));
+  replayTimers = [];
+}
+
+function openReplay(rec) {
+  stopReplay();
+  let moves = [];
+  try {
+    moves = JSON.parse(rec.moves || "[]");
+  } catch {
+    moves = [];
+  }
+  replayData = { ...rec, moves };
+
+  const values = boardFromSeed(Number(rec.seed) || 0, COLS * ROWS);
+  replayBoardEl.innerHTML = values
+    .map((v, i) => `<span class="replay-cell" data-i="${i}">${v}</span>`)
+    .join("");
+
+  // 수순만으로도 진위를 어느 정도 가릴 수 있다.
+  // 사람은 매칭 사이에 최소 0.2초 이상 걸리고, 합이 10이어야 한다.
+  const cells = [...replayBoardEl.children];
+  let prevT = 0;
+  let tooFast = 0;
+  let badSum = 0;
+  moves.forEach(([t, idx]) => {
+    if (t - prevT < 200) tooFast += 1;
+    prevT = t;
+    const sum = idx.reduce((a, i) => a + (values[i] ?? 0), 0);
+    if (sum !== 10) badSum += 1;
+  });
+
+  const problems = [];
+  if (moves.length === 0) problems.push("수순 기록이 없습니다(예전 버전 기록)");
+  if (badSum > 0) problems.push(`합이 10이 아닌 매칭 ${badSum}건`);
+  if (tooFast > 0) problems.push(`0.2초 미만 연속 매칭 ${tooFast}건`);
+
+  replayNoteEl.textContent = `${rec.name} · ${rec.score}점 · 매칭 ${moves.length}회 · ${Math.round((rec.durationMs || 0) / 1000)}초`;
+  replayVerdictEl.textContent = problems.length
+    ? `⚠️ ${problems.join(" / ")}`
+    : "✅ 수순이 규칙에 맞고 속도도 사람 범위입니다";
+  replayVerdictEl.className = problems.length
+    ? "admin-hint replay-verdict--bad"
+    : "admin-hint";
+
+  replayTimeEl.textContent = "0.0초";
+  replayModal.hidden = false;
+}
+
+replayPlayBtn.addEventListener("click", () => {
+  if (!replayData) return;
+  stopReplay();
+  const cells = [...replayBoardEl.children];
+  cells.forEach((c) => c.classList.remove("is-gone"));
+  // 30초 이내로 압축해서 보여준다
+  const dur = replayData.durationMs || 1;
+  const speed = Math.max(1, dur / 30000);
+  replayData.moves.forEach(([t, idx]) => {
+    replayTimers.push(
+      window.setTimeout(() => {
+        idx.forEach((i) => cells[i]?.classList.add("is-gone"));
+        replayTimeEl.textContent = `${(t / 1000).toFixed(1)}초`;
+      }, t / speed)
+    );
+  });
+});
+
+replayClose.addEventListener("click", () => {
+  stopReplay();
+  replayModal.hidden = true;
+});
+
+// 기록실과 관리자 창 양쪽에서 리플레이를 열 수 있다
+async function handleReplayClick(e) {
+  const btn = e.target.closest("[data-replay]");
+  if (!btn) return;
+  const id = btn.dataset.replay;
+  const all = await fetchScoresForAdmin(200);
+  const mine = await fetchMyScores(getNickname(), 200);
+  const rec = [...all, ...mine].find((r) => r.id === id);
+  if (rec) openReplay(rec);
+}
+myStatsListEl.addEventListener("click", handleReplayClick);
+
 // ── 돌발 이벤트 ────────────────────────────
 const eventBannerEl = document.getElementById("event-banner");
 const eventTitleEl = document.getElementById("event-title");
@@ -1047,6 +1241,7 @@ async function renderAdminScores() {
           <span class="online-list__code">${s.score}점 · 매칭 ${s.clears ?? "?"}회 · ${Math.round(sec)}초</span>
           ${flag}
         </span>
+        ${s.moves ? `<button type="button" class="block-btn" data-replay="${escapeHtml(s.id)}">리플레이</button>` : ""}
         <button type="button" class="block-btn" data-score="${escapeHtml(s.id)}">삭제</button>
       </li>`;
     })
@@ -1055,6 +1250,7 @@ async function renderAdminScores() {
 
 // 점수 삭제는 웹에서 직접 하지 않는다. 권한을 열면 누구나 랭킹을 지울 수 있기 때문이다.
 // 대신 운영자가 터미널에 붙여넣을 명령을 만들어 클립보드에 복사한다.
+adminScoreListEl.addEventListener("click", handleReplayClick);
 adminScoreListEl.addEventListener("click", async (e) => {
   const btn = e.target.closest("[data-score]");
   if (!btn || !isAdmin()) return;
