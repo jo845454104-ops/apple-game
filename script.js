@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=39";
-import { findTargeted } from "./profanity.js?v=39";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=40";
+import { findTargeted } from "./profanity.js?v=40";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=39";
-import { nicknameKey } from "./profanity.js?v=39";
+} from "./roulette.js?v=40";
+import { nicknameKey } from "./profanity.js?v=40";
 import {
   activeEvent,
   nextEvent,
@@ -20,7 +20,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=39";
+} from "./event.js?v=40";
 import {
   getNickname,
   setNickname,
@@ -39,7 +39,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=39";
+} from "./chat.js?v=40";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1175,11 +1175,13 @@ async function renderBlockedList() {
     }
     blockedListEl.innerHTML = list
       .map(
-        (b, i) => `<li>
+        (b, i) => `<li class="${b.active ? "" : "is-expired"}">
           <span class="rank">${i + 1}</span>
           <span class="name">${escapeHtml(b.name || "(닉네임 없음)")}
             <span class="blocked-item__reason">${escapeHtml(b.reason || "")}</span>
+            <span class="online-list__code">${escapeHtml(b.id)}</span>
           </span>
+          <span class="block-state">${b.active ? "차단 중" : "해제됨"}</span>
         </li>`
       )
       .join("");

@@ -1813,3 +1813,18 @@ body {
   color: var(--apple-red);
   font-weight: 700;
 }
+
+#blocked-list li.is-expired {
+  opacity: 0.5;
+}
+
+.block-state {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--apple-red);
+}
+
+#blocked-list li.is-expired .block-state {
+  color: var(--slate-400);
+}

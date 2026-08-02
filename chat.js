@@ -1,10 +1,13 @@
-import { getFirestoreApi } from "./firebase-app.js?v=39";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=39";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=39";
+import { getFirestoreApi } from "./firebase-app.js?v=40";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=40";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=40";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
 const PRUNE_INTERVAL_MS = 30000;
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const NICK_KEY = "apple-game-nickname";
 
@@ -211,7 +214,35 @@ export async function fetchBlockedList() {
   const snap = await api.getDocs(
     api.query(api.collection(db, "blocked"), api.limit(100))
   );
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snap.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+    active: blockStillActive(d.data()),
+  }));
+}
+
+// 차단은 매일 한국시간 09:00에 풀린다.
+// 기록을 실제로 지우지 않고 "직전 09시 이후에 걸린 차단만 유효"로 판단해,
+// 예약 작업 없이도 매일 자동으로 초기화된다.
+const BLOCK_RESET_HOUR_KST = 9;
+
+export function blockResetCutoff(now = Date.now()) {
+  const kst = new Date(now + KST_OFFSET_MS);
+  const today =
+    Date.UTC(
+      kst.getUTCFullYear(),
+      kst.getUTCMonth(),
+      kst.getUTCDate(),
+      BLOCK_RESET_HOUR_KST
+    ) - KST_OFFSET_MS;
+  return today <= now ? today : today - DAY_MS;
+}
+
+// 아직 살아 있는 차단인지 확인한다
+function blockStillActive(data) {
+  if (!data) return false;
+  const at = data.createdAt?.seconds ? data.createdAt.seconds * 1000 : 0;
+  return at >= blockResetCutoff();
 }
 
 export async function isBlockedOnServer() {
@@ -228,7 +259,10 @@ export async function isBlockedOnServer() {
   for (const id of ids) {
     try {
       const snap = await api.getDoc(api.doc(db, "blocked", id));
-      if (snap.exists()) return snap.data().reason || "부정 행위 감지";
+      // 오전 9시 이전에 걸린 차단은 이미 풀린 것으로 본다
+      if (snap.exists() && blockStillActive(snap.data())) {
+        return snap.data().reason || "부정 행위 감지";
+      }
     } catch {
       /* 조회 실패는 무시하고 다음 ID를 확인한다 */
     }
@@ -424,7 +458,9 @@ async function refreshBlockedCache(db, api) {
   if (Date.now() - blockedCacheAt < 30000) return blockedCache;
   try {
     const snap = await api.getDocs(api.query(api.collection(db, "blocked"), api.limit(200)));
-    blockedCache = new Set(snap.docs.map((d) => d.id));
+    blockedCache = new Set(
+      snap.docs.filter((d) => blockStillActive(d.data())).map((d) => d.id)
+    );
     blockedCacheAt = Date.now();
   } catch {
     /* 조회 실패 시 이전 목록을 그대로 쓴다 */
