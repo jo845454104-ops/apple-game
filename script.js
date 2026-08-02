@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=38";
-import { findTargeted } from "./profanity.js?v=38";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=39";
+import { findTargeted } from "./profanity.js?v=39";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=38";
-import { nicknameKey } from "./profanity.js?v=38";
+} from "./roulette.js?v=39";
+import { nicknameKey } from "./profanity.js?v=39";
 import {
   activeEvent,
   nextEvent,
@@ -20,7 +20,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=38";
+} from "./event.js?v=39";
 import {
   getNickname,
   setNickname,
@@ -39,7 +39,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=38";
+} from "./chat.js?v=39";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -438,7 +438,7 @@ async function openRanking() {
   try {
     const { online, scores } = await fetchTopScores();
     const next = getNextReset();
-    const resetNote = `매일 오후 6시 초기화 · 다음 초기화 ${next.toLocaleString("ko-KR", {
+    const resetNote = `매주 월요일 오전 8시 초기화 · 다음 초기화 ${next.toLocaleString("ko-KR", {
       month: "numeric",
       day: "numeric",
       hour: "2-digit",
