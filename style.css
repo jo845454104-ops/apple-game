@@ -1654,3 +1654,78 @@ body {
     height: var(--time-pct, 100%) !important;
   }
 }
+
+/* ── 돌발 이벤트 배너 ───────────────────────── */
+.event-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: linear-gradient(100deg, #f97316, #ef4444 55%, #db2777);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35);
+  animation: eventPulse 2s ease-in-out infinite;
+}
+
+.event-banner[hidden] {
+  display: none;
+}
+
+@keyframes eventPulse {
+  0%, 100% { box-shadow: 0 8px 24px rgba(239, 68, 68, 0.35); }
+  50% { box-shadow: 0 8px 32px rgba(239, 68, 68, 0.65); }
+}
+
+.event-banner--soon {
+  background: linear-gradient(100deg, #64748b, #475569);
+  box-shadow: none;
+  animation: none;
+}
+
+.event-banner--done {
+  background: linear-gradient(100deg, #16a34a, #059669);
+  box-shadow: none;
+  animation: none;
+}
+
+.event-banner__flame {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.event-banner__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.event-banner__title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.event-banner__desc {
+  font-size: 12px;
+  opacity: 0.95;
+  margin-top: 1px;
+}
+
+.event-banner__timer {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+@media (max-width: 720px) {
+  .event-banner {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .event-banner__title { font-size: 12px; }
+  .event-banner__desc { font-size: 10px; }
+  .event-banner__timer { font-size: 15px; }
+  .event-banner__flame { font-size: 18px; }
+}

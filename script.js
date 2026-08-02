@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=36";
-import { findTargeted } from "./profanity.js?v=36";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin } from "./leaderboard.js?v=37";
+import { findTargeted } from "./profanity.js?v=37";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,16 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=36";
-import { nicknameKey } from "./profanity.js?v=36";
+} from "./roulette.js?v=37";
+import { nicknameKey } from "./profanity.js?v=37";
+import {
+  activeEvent,
+  nextEvent,
+  claimEvent,
+  fetchMyEventPrizes,
+  watchEventWinners,
+  EVENT_PRIZE,
+} from "./event.js?v=37";
 import {
   getNickname,
   setNickname,
@@ -31,7 +39,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=36";
+} from "./chat.js?v=37";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -319,6 +327,20 @@ function endGame(cleared) {
   finalScoreEl.textContent = score;
   renderScoreNameArea();
   endOverlay.hidden = false;
+
+  // 돌발 이벤트가 진행 중이고 목표를 넘겼으면 바로 상품을 준다
+  const ev = activeEvent();
+  if (ev && score >= ev.target && getNickname()) {
+    claimEvent(getNickname(), nicknameKey(getNickname()), ev.id, score)
+      .then((res) => {
+        if (res.ok) {
+          submitStatusEl.textContent = `🔥 돌발 이벤트 달성! ${EVENT_PRIZE} 당첨!`;
+        } else if (res.reason) {
+          submitStatusEl.textContent = res.reason;
+        }
+      })
+      .catch((err) => console.error("이벤트 기록 실패", err));
+  }
 
   // 100점을 넘기면 룰렛 기회를 준다
   if (score >= ROULETTE_MIN_SCORE && getNickname()) {
@@ -765,23 +787,82 @@ rouletteCloseBtn.addEventListener("click", () => {
   rouletteEl.hidden = true;
 });
 
+let lastPrizeList = [];
+
 function renderTicker(list) {
-  if (!list || list.length === 0) {
+  lastPrizeList = list ?? lastPrizeList;
+  const rows = [
+    ...eventWinners.map((r) => ({ ...r, isEvent: true })),
+    ...(lastPrizeList || []),
+  ];
+  if (rows.length === 0) {
     tickerEl.hidden = true;
     return;
   }
   tickerEl.hidden = false;
-  tickerTrackEl.innerHTML = list
+  tickerTrackEl.innerHTML = rows
     .map((r) => {
       const win = r.prize && r.prize !== "꽝";
+      const tag = r.isEvent ? "🔥 돌발 이벤트 " : "";
       return `<span class="${win ? "win" : ""}">
-        <b>${escapeHtml(r.name || "?")}</b>님 ${r.score}점 · ${escapeHtml(r.prize || "")} 달성했습니다
+        ${tag}<b>${escapeHtml(r.name || "?")}</b>님 ${r.score}점 · ${escapeHtml(r.prize || "")} 달성했습니다
       </span>`;
     })
     .join("");
 }
 
 watchPrizes(renderTicker, 20);
+
+// ── 돌발 이벤트 ────────────────────────────
+const eventBannerEl = document.getElementById("event-banner");
+const eventTitleEl = document.getElementById("event-title");
+const eventDescEl = document.getElementById("event-desc");
+const eventTimerEl = document.getElementById("event-timer");
+
+let liveEvent = null;
+
+function fmtClock(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+function renderEventBanner() {
+  const now = new Date();
+  liveEvent = activeEvent(now);
+
+  if (liveEvent) {
+    eventBannerEl.hidden = false;
+    eventBannerEl.className = "event-banner";
+    eventTitleEl.textContent = `🔥 돌발 이벤트 진행 중! ${liveEvent.target}점 이상 달성하면 ${EVENT_PRIZE}!`;
+    eventDescEl.textContent = `제한 시간 안에 ${liveEvent.target}점을 넘기면 즉시 당첨됩니다`;
+    eventTimerEl.textContent = fmtClock(liveEvent.endAt - now);
+    return;
+  }
+
+  const upcoming = nextEvent(now);
+  if (upcoming) {
+    eventBannerEl.hidden = false;
+    eventBannerEl.className = "event-banner event-banner--soon";
+    eventTitleEl.textContent = "⏰ 오늘 돌발 이벤트가 예정되어 있습니다";
+    eventDescEl.textContent = `${upcoming.startAt.toLocaleTimeString("ko-KR", {
+      hour: "2-digit", minute: "2-digit",
+    })}에 시작 · 30분 동안 진행`;
+    eventTimerEl.textContent = "";
+    return;
+  }
+
+  eventBannerEl.hidden = true;
+}
+
+renderEventBanner();
+window.setInterval(renderEventBanner, 1000);
+
+// 이벤트 달성자도 상단 로그에 함께 보여준다
+let eventWinners = [];
+watchEventWinners((list) => {
+  eventWinners = list;
+  renderTicker(lastPrizeList);
+}, 20);
 
 // ── 내 당첨권 ──────────────────────────────
 const myPrizeBtn = document.getElementById("myprize-btn");
@@ -800,11 +881,17 @@ async function renderMyPrizes() {
     return;
   }
   myPrizeListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
-  const list = await fetchMyPrizes(nicknameKey(nick));
+  const [list, evList] = await Promise.all([
+    fetchMyPrizes(nicknameKey(nick)),
+    fetchMyEventPrizes(nicknameKey(nick)),
+  ]);
   const reset = nextResetAt().toLocaleString("ko-KR", {
     month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
-  const won = list.filter((r) => r.prize && r.prize !== "꽝");
+  const won = [
+    ...evList.map((r) => ({ ...r, n: "돌발", isEvent: true })),
+    ...list.filter((r) => r.prize && r.prize !== "꽝"),
+  ];
   myPrizeNoteEl.textContent = `${nick} · 오늘 ${list.length}/${DAILY_SPINS}회 사용 · ${reset}에 초기화`;
 
   if (won.length === 0) {
@@ -817,7 +904,9 @@ async function renderMyPrizes() {
       (r, i) => `<li>
         <span class="rank">${i + 1}</span>
         <span class="name">${EMOJI[r.prize] || "🎁"} ${escapeHtml(r.prize)}
-          <span class="online-list__code">${r.score}점 달성 · ${r.n}번째 룰렛</span>
+          <span class="online-list__code">${r.score}점 달성 · ${
+            r.isEvent ? "🔥 돌발 이벤트" : `${r.n}번째 룰렛`
+          }</span>
         </span>
       </li>`
     )

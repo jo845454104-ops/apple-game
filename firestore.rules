@@ -153,6 +153,42 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // 돌발 이벤트 달성 기록.
+    // 문서 ID를 "닉네임__이벤트"로 고정해 이벤트당 한 번만 받을 수 있다.
+    // 정확한 목표 점수는 클라이언트가 날짜로 계산하지만, 서버는
+    // "평일 한국시간 14~17시, 최소 목표(107점) 이상"만은 직접 검증한다.
+    match /events/{doc} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+          ['name', 'nk', 'ev', 'prize', 'score', 'cid', 'fp', 'createdAt']
+        )
+        && request.resource.data.nk is string
+        && request.resource.data.nk.size() > 0
+        && request.resource.data.ev is string
+        && doc == request.resource.data.nk + '__' + request.resource.data.ev
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 12
+        && cleanName(request.resource.data.name)
+        && request.resource.data.prize is string
+        && request.resource.data.prize.size() <= 20
+        && request.resource.data.score is number
+        && request.resource.data.score >= 107
+        && request.resource.data.score <= 170
+        // 한국시간 14:00~17:00 = UTC 05:00~08:00
+        && request.time.hours() >= 5
+        && request.time.hours() < 8
+        // 평일만 (1=월 ~ 5=금)
+        && request.time.dayOfWeek() >= 1
+        && request.time.dayOfWeek() <= 5
+        && request.resource.data.cid is string
+        && notBlocked(request.resource.data.cid)
+        && notBlocked(request.resource.data.get('fp', 'none'))
+        && ownsNickname(request.resource.data.nk, request.resource.data.cid)
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
     // 운영자 설정. 읽기만 공개하고 변경은 관리 도구(CLI)로만 한다.
     match /config/settings {
       allow read: if true;
