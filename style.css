@@ -2644,3 +2644,36 @@ body {
   line-height: 1.7;
   color: var(--slate-400);
 }
+
+/* ── 리플레이 창 ──────────────────────────
+   랭킹·기록실·관리자 창에서 열리므로 그것들보다 위에 떠야 한다.
+   기본 모달과 z-index 가 같으면 뒤에 깔려 가려진다.
+   판이 17열이라 좁은 카드에서는 숫자가 뭉개져서 따로 넓힌다. */
+#replay-modal {
+  z-index: 970;
+}
+
+#replay-modal .modal__card {
+  max-width: 760px;
+  width: 94%;
+  max-height: 92vh;
+}
+
+#replay-modal .replay-board {
+  gap: 3px;
+  padding: 10px;
+}
+
+#replay-modal .replay-cell {
+  font-size: clamp(10px, 1.5vw, 16px);
+}
+
+@media (max-width: 620px) {
+  #replay-modal .modal__card {
+    padding: 18px 14px;
+  }
+  #replay-modal .replay-board {
+    gap: 2px;
+    padding: 6px;
+  }
+}
