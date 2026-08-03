@@ -2,8 +2,8 @@
 
 일본 게임사이엔의 "사과게임"을 재현한 웹 게임입니다. 17×10(170개) 사과에서 드래그로 합이 10이 되는 조합을 골라 터뜨리고, 2분 동안 최대한 높은 점수를 얻습니다.
 
-**배포 주소** — https://jo845454104-ops.github.io/apple-game/
-**저장소** — https://github.com/jo845454104-ops/apple-game
+**배포 주소** — https://jo845454104-ops.github.io/dsa-play-k7m2q9/
+**저장소** — https://github.com/jo845454104-ops/dsa-play-k7m2q9
 **Firebase** — 프로젝트 `jo8454-ea749` (Firestore, asia-northeast3)
 
 ---
@@ -21,7 +21,7 @@
 # 2) 커밋 & 푸시
 git add -A && git commit -m "..." && git push origin main
 # 3) GitHub Pages 반영 확인 (10분 캐시가 있어 확인 필수)
-curl -s https://jo845454104-ops.github.io/apple-game/ | grep "script.js?v="
+curl -s https://jo845454104-ops.github.io/dsa-play-k7m2q9/ | grep "script.js?v="
 ```
 
 버전 일괄 상향:
