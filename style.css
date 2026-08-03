@@ -187,8 +187,12 @@ body {
 
 .board-frame {
   position: relative;
-  flex: 0 1 calc((100vh - 265px) * 1.62);
-  max-width: calc((100vh - 265px) * 1.62);
+  /* 빼는 값은 게임판 위아래가 쓰는 높이의 합이다.
+     여백 32 + 코너바 44 + 헤더 107 + HUD 74 + 하단바 45 + 안내문 38.
+     위아래에 무언가를 더하거나 빼면 이 값도 같이 고쳐야 한다.
+     안 고치면 판이 커져 페이지가 세로로 넘치고 화면 밖으로 밀린다. */
+  flex: 0 1 calc((100vh - 340px) * 1.62);
+  max-width: calc((100vh - 340px) * 1.62);
   min-width: 0;
   display: flex;
   gap: 14px;
@@ -235,12 +239,15 @@ body {
   color: #fff;
   font-weight: 800;
   font-size: clamp(11px, 1.1vw, 17px);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='35%25' cy='30%25' r='80%25'%3E%3Cstop offset='0%25' stop-color='%23ff8a75'/%3E%3Cstop offset='55%25' stop-color='%23ef4444'/%3E%3Cstop offset='100%25' stop-color='%23b91c1c'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cpath d='M32 16 C22 6 6 13 6 31 C6 48 19 61 32 58 C45 61 58 48 58 31 C58 13 42 6 32 16 Z' fill='url(%23g)'/%3E%3Cpath d='M32 15 C32 9 34 5 38 3' stroke='%237c4a21' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cellipse cx='43' cy='9' rx='8' ry='4.5' fill='%2334c759' transform='rotate(-25 43 9)'/%3E%3Cellipse cx='21' cy='24' rx='6' ry='9' fill='rgba(255,255,255,0.3)' transform='rotate(-18 21 24)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='35%25' cy='30%25' r='80%25'%3E%3Cstop offset='0%25' stop-color='%23ff8a75'/%3E%3Cstop offset='55%25' stop-color='%23ef4444'/%3E%3Cstop offset='100%25' stop-color='%23b91c1c'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cpath d='M32 16 C22 6 6 13 6 31 C6 48 19 61 32 58 C45 61 58 48 58 31 C58 13 42 6 32 16 Z' fill='%230f172a' opacity='0.22' transform='translate(0,2.5)'/%3E%3Cpath d='M32 16 C22 6 6 13 6 31 C6 48 19 61 32 58 C45 61 58 48 58 31 C58 13 42 6 32 16 Z' fill='url(%23g)'/%3E%3Cpath d='M32 15 C32 9 34 5 38 3' stroke='%237c4a21' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cellipse cx='43' cy='9' rx='8' ry='4.5' fill='%2334c759' transform='rotate(-25 43 9)'/%3E%3Cellipse cx='21' cy='24' rx='6' ry='9' fill='rgba(255,255,255,0.3)' transform='rotate(-18 21 24)'/%3E%3C/svg%3E");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  filter: drop-shadow(0 2px 2px rgba(15, 23, 42, 0.18));
-  transition: transform 0.12s ease, opacity 0.25s ease, filter 0.12s ease;
+  /* 그림자는 배경 SVG 안에 그려 넣었다.
+     여기에 filter: drop-shadow 를 주면 사과 170개마다 매 프레임 다시 계산돼
+     드래그할 때 프레임이 절반으로 떨어진다(120fps → 70fps). 되돌리지 말 것.
+     같은 이유로 transition 에도 filter 를 넣지 않는다. */
+  transition: transform 0.12s ease, opacity 0.25s ease;
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
@@ -258,7 +265,7 @@ body {
 }
 
 .apple-grid.is-pale .apple {
-  filter: saturate(0.5) brightness(1.1) drop-shadow(0 2px 2px rgba(15, 23, 42, 0.12));
+  filter: saturate(0.5) brightness(1.1);
 }
 
 .apple.is-selecting {
@@ -1204,7 +1211,7 @@ body {
 
 /* 그린애플 모드 — 사과 그림을 초록 계열로 바꾼다 */
 .apple-grid.is-green .apple {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='35%25' cy='30%25' r='80%25'%3E%3Cstop offset='0%25' stop-color='%23bff08a'/%3E%3Cstop offset='55%25' stop-color='%2358c22b'/%3E%3Cstop offset='100%25' stop-color='%232f7d15'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cpath d='M32 16 C22 6 6 13 6 31 C6 48 19 61 32 58 C45 61 58 48 58 31 C58 13 42 6 32 16 Z' fill='url(%23g)'/%3E%3Cpath d='M32 15 C32 9 34 5 38 3' stroke='%237c4a21' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cellipse cx='43' cy='9' rx='8' ry='4.5' fill='%23e0533a' transform='rotate(-25 43 9)'/%3E%3Cellipse cx='21' cy='24' rx='6' ry='9' fill='rgba(255,255,255,0.35)' transform='rotate(-18 21 24)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g' cx='35%25' cy='30%25' r='80%25'%3E%3Cstop offset='0%25' stop-color='%23bff08a'/%3E%3Cstop offset='55%25' stop-color='%2358c22b'/%3E%3Cstop offset='100%25' stop-color='%232f7d15'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cpath d='M32 16 C22 6 6 13 6 31 C6 48 19 61 32 58 C45 61 58 48 58 31 C58 13 42 6 32 16 Z' fill='%230f172a' opacity='0.22' transform='translate(0,2.5)'/%3E%3Cpath d='M32 16 C22 6 6 13 6 31 C6 48 19 61 32 58 C45 61 58 48 58 31 C58 13 42 6 32 16 Z' fill='url(%23g)'/%3E%3Cpath d='M32 15 C32 9 34 5 38 3' stroke='%237c4a21' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3Cellipse cx='43' cy='9' rx='8' ry='4.5' fill='%23e0533a' transform='rotate(-25 43 9)'/%3E%3Cellipse cx='21' cy='24' rx='6' ry='9' fill='rgba(255,255,255,0.35)' transform='rotate(-18 21 24)'/%3E%3C/svg%3E");
 }
 
 .apple-grid.is-green .apple.is-selecting {

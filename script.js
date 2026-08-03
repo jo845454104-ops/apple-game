@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=55";
-import { findTargeted } from "./profanity.js?v=55";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=57";
+import { findTargeted } from "./profanity.js?v=57";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=55";
-import { nicknameKey } from "./profanity.js?v=55";
+} from "./roulette.js?v=57";
+import { nicknameKey } from "./profanity.js?v=57";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +21,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=55";
+} from "./shop.js?v=57";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -35,7 +35,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=55";
+} from "./duel.js?v=57";
 import {
   activeEvent,
   upcomingEvent,
@@ -43,7 +43,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=55";
+} from "./event.js?v=57";
 import {
   getNickname,
   setNickname,
@@ -62,7 +62,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=55";
+} from "./chat.js?v=57";
 
 const GAME_SECONDS = 120;
 const COLS = 17;

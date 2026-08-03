@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=55";
-import { getClientId } from "./chat.js?v=55";
-import { getFingerprint } from "./fingerprint.js?v=55";
+import { getFirestoreApi } from "./firebase-app.js?v=57";
+import { getClientId } from "./chat.js?v=57";
+import { getFingerprint } from "./fingerprint.js?v=57";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
