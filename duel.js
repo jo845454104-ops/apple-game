@@ -1,7 +1,7 @@
-import { getFirestoreApi } from "./firebase-app.js?v=47";
-import { getClientId } from "./chat.js?v=47";
-import { fetchMyPrizes } from "./roulette.js?v=47";
-import { fetchMyEventPrizes } from "./event.js?v=47";
+import { getFirestoreApi } from "./firebase-app.js?v=48";
+import { getClientId } from "./chat.js?v=48";
+import { fetchMyPrizes } from "./roulette.js?v=48";
+import { fetchMyEventPrizes } from "./event.js?v=48";
 
 // 멀티플레이 대결
 // 방을 만들면 시드가 정해지고, 두 사람이 같은 배치로 겨룬다.

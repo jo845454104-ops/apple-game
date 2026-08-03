@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>🍎 사과게임 - DSA 아카데미</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=47" />
+  <link rel="stylesheet" href="style.css?v=48" />
   <script>
     // 스타일이 적용되기 전에 테마를 정해 화면이 번쩍이는 것을 막는다.
     try {
@@ -51,7 +51,7 @@
       <button type="button" class="ghost-btn" id="myprize-btn">🎫 내 당첨권</button>
       <button type="button" class="ghost-btn" id="mystats-btn">📊 내 기록실</button>
       <button type="button" class="ghost-btn" id="duel-btn">⚔️ 대결</button>
-      <button type="button" class="ghost-btn" id="shop-btn">🏪 상점</button>
+      <button type="button" class="ghost-btn" id="shop-btn">🎫 증정권 발급</button>
       <button type="button" class="ghost-btn" id="reset-btn">Reset</button>
     </div>
 
@@ -211,15 +211,15 @@
   <div class="modal" id="shop-modal" hidden>
     <div class="modal__card">
       <div class="modal__header">
-        <h2>🏪 상점</h2>
+        <h2>🎫 개인 증정권 발급</h2>
         <button type="button" class="modal__close" id="shop-close">&times;</button>
       </div>
-      <p class="modal__status">내 이름으로 교환권을 발급합니다. 일련번호로 진위를 확인할 수 있어요.</p>
+      <p class="modal__status">내 이름으로 증정권을 발급합니다. 일련번호로 진위를 확인할 수 있어요.</p>
 
       <div class="shop-grid" id="shop-grid"></div>
       <p class="admin-status" id="shop-status"></p>
 
-      <h3 class="admin-subtitle">🎟️ 내 교환권</h3>
+      <h3 class="admin-subtitle">🎟️ 내 증정권</h3>
       <ol class="ranking-list" id="ticket-list"></ol>
 
       <h3 class="admin-subtitle">🔎 전산 확인</h3>
@@ -244,7 +244,7 @@
         <h3 class="admin-subtitle">방 만들기</h3>
         <div class="duel-form">
           <label class="duel-field">
-            <span class="duel-field__label">걸 교환권 (여러 장 선택 가능)</span>
+            <span class="duel-field__label">걸 증정권 (여러 장 선택 가능)</span>
             <select id="duel-stake" multiple size="4"></select>
           </label>
           <label class="duel-field">
@@ -405,6 +405,6 @@
 
   <!-- v 값은 파일을 고칠 때마다 올린다. 브라우저 캐시 때문에 HTML만 새것이고
        스크립트는 옛것인 상태가 생기지 않도록 모든 모듈에 같은 값을 붙인다. -->
-  <script type="module" src="script.js?v=47"></script>
+  <script type="module" src="script.js?v=48"></script>
 </body>
 </html>

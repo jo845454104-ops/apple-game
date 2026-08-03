@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=47";
-import { findTargeted } from "./profanity.js?v=47";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=48";
+import { findTargeted } from "./profanity.js?v=48";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=47";
-import { nicknameKey } from "./profanity.js?v=47";
+} from "./roulette.js?v=48";
+import { nicknameKey } from "./profanity.js?v=48";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +21,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=47";
+} from "./shop.js?v=48";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -32,7 +32,7 @@ import {
   watchRoom,
   openRooms,
   duelWinner,
-} from "./duel.js?v=47";
+} from "./duel.js?v=48";
 import {
   activeEvent,
   upcomingEvent,
@@ -40,7 +40,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=47";
+} from "./event.js?v=48";
 import {
   getNickname,
   setNickname,
@@ -59,7 +59,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=47";
+} from "./chat.js?v=48";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1047,7 +1047,7 @@ async function handleReplayClick(e) {
 myStatsListEl.addEventListener("click", handleReplayClick);
 rankingList.addEventListener("click", handleReplayClick);
 
-// ── 상점 ───────────────────────────────────
+// ── 개인 증정권 발급 ───────────────────────
 const shopBtn = document.getElementById("shop-btn");
 const shopModal = document.getElementById("shop-modal");
 const shopCloseBtn = document.getElementById("shop-close");
@@ -1080,7 +1080,7 @@ async function renderMyTickets() {
   ticketListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
   const list = await myTickets(nicknameKey(nick));
   if (list.length === 0) {
-    ticketListEl.innerHTML = '<li class="ranking-empty">아직 발급받은 교환권이 없습니다.</li>';
+    ticketListEl.innerHTML = '<li class="ranking-empty">아직 발급받은 증정권이 없습니다.</li>';
     return;
   }
   ticketListEl.innerHTML = list
@@ -1133,7 +1133,7 @@ shopGridEl.addEventListener("click", async (e) => {
 ticketListEl.addEventListener("click", async (e) => {
   const btn = e.target.closest("[data-use]");
   if (!btn) return;
-  if (!window.confirm("이 교환권을 사용 처리할까요? 되돌릴 수 없습니다.")) return;
+  if (!window.confirm("이 증정권을 사용 처리할까요? 되돌릴 수 없습니다.")) return;
   btn.disabled = true;
   try {
     await useTicket(btn.dataset.use);
@@ -1162,7 +1162,7 @@ async function doVerify() {
     : "-";
   verifyResultEl.className = `verify-result ${r.valid ? "is-ok" : "is-bad"}`;
   verifyResultEl.innerHTML = `
-    <div class="verify-result__title">${r.valid ? "✅ 유효한 교환권" : "⚠️ 이미 사용됨"}</div>
+    <div class="verify-result__title">${r.valid ? "✅ 유효한 증정권" : "⚠️ 이미 사용됨"}</div>
     <b>${escapeHtml(r.title)}</b><br />
     일련번호: ${r.code}<br />
     현재 소유자: ${escapeHtml(r.owner || "-")}<br />
@@ -1212,7 +1212,7 @@ async function fillStakeOptions() {
   if (!nick) return;
   const list = (await myTickets(nicknameKey(nick))).filter((t) => t.state === "active");
   if (list.length === 0) {
-    duelStakeSel.innerHTML = '<option disabled>걸 수 있는 교환권이 없습니다</option>';
+    duelStakeSel.innerHTML = '<option disabled>걸 수 있는 증정권이 없습니다</option>';
     return;
   }
   list.forEach((t) => {
@@ -1292,7 +1292,7 @@ async function fillTradeAddOptions(already) {
         const p = prettySerial(t.serial);
         return `<option value="${escapeHtml(t.serial)}">${escapeHtml(p.title)} · ${p.code}</option>`;
       }).join("")
-    : '<option disabled>올릴 교환권이 없습니다</option>';
+    : '<option disabled>올릴 증정권이 없습니다</option>';
 }
 
 tradeAddBtn.addEventListener("click", async () => {
@@ -1305,7 +1305,7 @@ tradeAddBtn.addEventListener("click", async () => {
   }
 });
 
-// 대결이 끝나면 진 쪽의 교환권을 이긴 쪽으로 넘긴다
+// 대결이 끝나면 진 쪽의 증정권을 이긴 쪽으로 넘긴다
 let settledRoom = null;
 async function settleDuel(room) {
   const winner = duelWinner(room);
@@ -1325,10 +1325,10 @@ async function settleDuel(room) {
     try {
       await transferTicket(serial, nick, nicknameKey(nick), getClientIdSafe(), fromNk);
     } catch (err) {
-      console.error("교환권 이전 실패", serial, err);
+      console.error("증정권 이전 실패", serial, err);
     }
   }
-  duelRoomMsgEl.textContent += ` · 교환권 ${loot.length}장을 획득했습니다!`;
+  duelRoomMsgEl.textContent += ` · 증정권 ${loot.length}장을 획득했습니다!`;
 }
 
 function getClientIdSafe() {

@@ -1,7 +1,7 @@
-import { getFirestoreApi } from "./firebase-app.js?v=47";
-import { getClientId } from "./chat.js?v=47";
+import { getFirestoreApi } from "./firebase-app.js?v=48";
+import { getClientId } from "./chat.js?v=48";
 
-// 상점에서 발급하는 티켓
+// 개인이 자기 이름으로 발급하는 증정권
 // 일련번호가 곧 문서 ID다. "닉네임__종류__회차" 형태로 고정해서
 // 같은 회차에 같은 종류를 두 번 만들 수 없다. 이것으로 발급 주기가 강제된다.
 
@@ -43,7 +43,7 @@ export function prettySerial(serial) {
 export async function issueTicket({ kind, name, nickKey }) {
   const ctx = await getFirestoreApi();
   if (!ctx) throw new Error("서버에 연결되어 있지 않습니다.");
-  if (!TICKET_KINDS[kind]) throw new Error("알 수 없는 티켓 종류입니다.");
+  if (!TICKET_KINDS[kind]) throw new Error("알 수 없는 증정권 종류입니다.");
 
   const { db, api } = ctx;
   const period = periodOf(kind);
@@ -123,8 +123,8 @@ export async function useTicket(serial) {
   const { db, api } = ctx;
   const ref = api.doc(db, "tickets", serial);
   const snap = await api.getDoc(ref).catch(() => null);
-  if (!snap?.exists()) throw new Error("그런 티켓이 없습니다.");
-  if (snap.data().state === "used") throw new Error("이미 사용된 티켓입니다.");
+  if (!snap?.exists()) throw new Error("그런 증정권이 없습니다.");
+  if (snap.data().state === "used") throw new Error("이미 사용된 증정권입니다.");
 
   await api.updateDoc(ref, { state: "used", usedAt: api.serverTimestamp() });
   return true;
