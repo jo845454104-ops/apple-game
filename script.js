@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=50";
-import { findTargeted } from "./profanity.js?v=50";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=51";
+import { findTargeted } from "./profanity.js?v=51";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=50";
-import { nicknameKey } from "./profanity.js?v=50";
+} from "./roulette.js?v=51";
+import { nicknameKey } from "./profanity.js?v=51";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +21,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=50";
+} from "./shop.js?v=51";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -32,7 +32,9 @@ import {
   watchRoom,
   openRooms,
   duelWinner,
-} from "./duel.js?v=50";
+  forfeit,
+  isForfeitWin,
+} from "./duel.js?v=51";
 import {
   activeEvent,
   upcomingEvent,
@@ -40,7 +42,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=50";
+} from "./event.js?v=51";
 import {
   getNickname,
   setNickname,
@@ -59,7 +61,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=50";
+} from "./chat.js?v=51";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1206,26 +1208,53 @@ function showDuelLobby() {
   duelRoomEl.hidden = true;
 }
 
-async function fillStakeOptions() {
-  const nick = getNickname();
-  duelStakeSel.innerHTML = "";
-  if (!nick) return;
-  const list = (await myTickets(nicknameKey(nick))).filter((t) => t.state === "active");
+// 증정권을 눌러서 올리고 내리는 목록을 그린다
+function stakeChips(list, chosen) {
   if (list.length === 0) {
-    duelStakeSel.innerHTML = '<option disabled>걸 수 있는 증정권이 없습니다</option>';
-    return;
+    return '<li class="empty">걸 수 있는 증정권이 없습니다</li>';
   }
-  list.forEach((t) => {
-    const p = prettySerial(t.serial);
-    const opt = document.createElement("option");
-    opt.value = t.serial;
-    opt.textContent = `${p.title} · ${p.code}`;
-    duelStakeSel.appendChild(opt);
-  });
+  return list
+    .map((t) => {
+      const p = prettySerial(t.serial);
+      const on = chosen.includes(t.serial);
+      return `<li>
+        <button type="button" class="stake-chip ${on ? "is-on" : ""}" data-stake="${escapeHtml(t.serial)}">
+          <span class="stake-chip__mark">✓</span>
+          <span class="stake-chip__body">${escapeHtml(p.title)}
+            <span class="stake-chip__code">${p.code}</span>
+          </span>
+        </button>
+      </li>`;
+    })
+    .join("");
 }
 
+let createStakes = [];
+let myTicketCache = [];
+
+async function fillStakeOptions() {
+  const nick = getNickname();
+  createStakes = [];
+  if (!nick) {
+    duelStakeSel.innerHTML = '<li class="empty">닉네임을 먼저 정하세요</li>';
+    return;
+  }
+  myTicketCache = (await myTickets(nicknameKey(nick))).filter((t) => t.state === "active");
+  duelStakeSel.innerHTML = stakeChips(myTicketCache, createStakes);
+}
+
+duelStakeSel.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-stake]");
+  if (!btn) return;
+  const serial = btn.dataset.stake;
+  createStakes = createStakes.includes(serial)
+    ? createStakes.filter((s) => s !== serial)
+    : [...createStakes, serial];
+  duelStakeSel.innerHTML = stakeChips(myTicketCache, createStakes);
+});
+
 function selectedStakes() {
-  return [...duelStakeSel.selectedOptions].map((o) => o.value).filter(Boolean);
+  return createStakes;
 }
 
 async function renderOpenRooms() {
@@ -1254,7 +1283,6 @@ const tradeHostLabel = document.getElementById("trade-host-label");
 const tradeGuestLabel = document.getElementById("trade-guest-label");
 const tradeAddRow = document.getElementById("trade-add-row");
 const tradeAddSel = document.getElementById("trade-add-sel");
-const tradeAddBtn = document.getElementById("trade-add-btn");
 
 function stakeItems(list) {
   if (!list || list.length === 0) {
@@ -1285,23 +1313,25 @@ function renderTrade(room) {
 async function fillTradeAddOptions(already) {
   const nick = getNickname();
   if (!nick) return;
-  const list = (await myTickets(nicknameKey(nick)))
-    .filter((t) => t.state === "active" && !already.includes(t.serial));
-  tradeAddSel.innerHTML = list.length
-    ? list.map((t) => {
-        const p = prettySerial(t.serial);
-        return `<option value="${escapeHtml(t.serial)}">${escapeHtml(p.title)} · ${p.code}</option>`;
-      }).join("")
-    : '<option disabled>올릴 증정권이 없습니다</option>';
+  const list = (await myTickets(nicknameKey(nick))).filter((t) => t.state === "active");
+  tradeAddSel.innerHTML = stakeChips(list, already || []);
 }
 
-tradeAddBtn.addEventListener("click", async () => {
-  if (!duelRoom || !tradeAddSel.value) return;
-  const next = [...(duelRoom.guestStakes || []), tradeAddSel.value];
+// 방 안에서도 눌러서 올리고 내린다
+tradeAddSel.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-stake]");
+  if (!btn || !duelRoom) return;
+  const serial = btn.dataset.stake;
+  const now = duelRoom.guestStakes || [];
+  const next = now.includes(serial)
+    ? now.filter((s) => s !== serial)
+    : [...now, serial];
+  btn.classList.toggle("is-on");
   try {
     await setGuestStakes(duelRoom.code, next);
   } catch (err) {
-    duelRoomMsgEl.textContent = "판돈을 올리지 못했습니다.";
+    duelRoomMsgEl.textContent = "판돈을 바꾸지 못했습니다.";
+    btn.classList.toggle("is-on");
   }
 });
 
@@ -1366,7 +1396,9 @@ function renderDuelRoom(room) {
       winner === "draw"
         ? "무승부!"
         : (winner === "host" ? room.host : room.guest) + " 님 승리!";
-    duelRoomMsgEl.textContent = `🏁 ${label}`;
+    duelRoomMsgEl.textContent = isForfeitWin(room)
+      ? `🏳️ 상대가 나갔습니다 · ${label}`
+      : `🏁 ${label}`;
     duelStartBtn.hidden = true;
     settleDuel(room);
   } else if (!room.guest) {
@@ -1399,6 +1431,14 @@ duelBtn.addEventListener("click", async () => {
 });
 
 duelCloseBtn.addEventListener("click", () => { duelModal.hidden = true; });
+
+// 대결 중에 페이지를 떠나면 기권으로 처리한다
+window.addEventListener("pagehide", () => {
+  if (duelRoom?.guest && !duelWinner(duelRoom)) {
+    const nick = getNickname();
+    if (nick) forfeit(duelRoom.code, nicknameKey(nick));
+  }
+});
 duelModal.addEventListener("click", (e) => {
   if (e.target === duelModal) duelModal.hidden = true;
 });
@@ -1456,7 +1496,13 @@ duelRoomsEl.addEventListener("click", (e) => {
   if (btn) doJoin(btn.dataset.room);
 });
 
-duelLeaveBtn.addEventListener("click", () => {
+duelLeaveBtn.addEventListener("click", async () => {
+  // 상대가 있고 아직 승부가 안 났다면 기권으로 처리한다
+  if (duelRoom?.guest && !duelWinner(duelRoom)) {
+    if (!window.confirm("지금 나가면 기권 처리되어 상대가 이깁니다. 나갈까요?")) return;
+    const nick = getNickname();
+    await forfeit(duelRoom.code, nicknameKey(nick));
+  }
   duelUnwatch?.();
   duelUnwatch = null;
   duelRoom = null;

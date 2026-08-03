@@ -2249,3 +2249,80 @@ body {
     font-size: 10px;
   }
 }
+
+/* ── 증정권 토글 선택 ─────────────────────── */
+.stake-picker {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.stake-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--slate-600);
+  background: var(--surface);
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.stake-chip:hover {
+  border-color: var(--accent);
+}
+
+.stake-chip.is-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.stake-chip__mark {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--slate-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: transparent;
+}
+
+.stake-chip.is-on .stake-chip__mark {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.stake-chip__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.stake-chip__code {
+  display: block;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  opacity: 0.7;
+}
+
+.stake-picker .empty {
+  font-size: 12px;
+  color: var(--slate-400);
+  text-align: center;
+  padding: 10px 0;
+}

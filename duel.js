@@ -1,7 +1,7 @@
-import { getFirestoreApi } from "./firebase-app.js?v=50";
-import { getClientId } from "./chat.js?v=50";
-import { fetchMyPrizes } from "./roulette.js?v=50";
-import { fetchMyEventPrizes } from "./event.js?v=50";
+import { getFirestoreApi } from "./firebase-app.js?v=51";
+import { getClientId } from "./chat.js?v=51";
+import { fetchMyPrizes } from "./roulette.js?v=51";
+import { fetchMyEventPrizes } from "./event.js?v=51";
 
 // 멀티플레이 대결
 // 방을 만들면 시드가 정해지고, 두 사람이 같은 배치로 겨룬다.
@@ -115,6 +115,16 @@ export async function submitResult({ code, isHost, score, moves }) {
   await api.updateDoc(api.doc(db, "duels", code), payload);
 }
 
+// 대결 중에 나가면 기권 처리되어 상대가 이긴다
+export async function forfeit(code, whoNk) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return;
+  const { db, api } = ctx;
+  await api
+    .updateDoc(api.doc(db, "duels", code), { forfeit: whoNk, state: "done" })
+    .catch(() => {});
+}
+
 export async function watchRoom(code, onChange) {
   const ctx = await getFirestoreApi();
   if (!ctx) return () => {};
@@ -143,9 +153,18 @@ export async function openRooms(limit = 15) {
 }
 
 export function duelWinner(room) {
+  // 한쪽이 나가면 남은 쪽이 바로 이긴다
+  if (room.forfeit) {
+    if (room.forfeit === room.hostNk) return "guest";
+    if (room.forfeit === room.guestNk) return "host";
+  }
   const h = room.hostScore;
   const g = room.guestScore;
   if (typeof h !== "number" || typeof g !== "number") return null;
   if (h === g) return "draw";
   return h > g ? "host" : "guest";
+}
+
+export function isForfeitWin(room) {
+  return Boolean(room?.forfeit);
 }

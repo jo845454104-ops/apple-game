@@ -271,7 +271,7 @@ service cloud.firestore {
         && request.resource.data.get('pw', '') == resource.data.get('pw', '')
         && request.resource.data.keys().hasOnly([
           'host', 'hostNk', 'hostCid', 'seed', 'stake', 'hostStakes', 'pw', 'state', 'createdAt',
-          'guest', 'guestNk', 'guestCid', 'guestStakes', 'guestReady', 'startedAt',
+          'guest', 'guestNk', 'guestCid', 'guestStakes', 'guestReady', 'startedAt', 'forfeit',
           'hostScore', 'hostMoves', 'guestScore', 'guestMoves', 'settled'
         ])
         && (!('guestCid' in request.resource.data.keys())
