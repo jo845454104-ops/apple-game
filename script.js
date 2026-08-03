@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=48";
-import { findTargeted } from "./profanity.js?v=48";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=50";
+import { findTargeted } from "./profanity.js?v=50";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=48";
-import { nicknameKey } from "./profanity.js?v=48";
+} from "./roulette.js?v=50";
+import { nicknameKey } from "./profanity.js?v=50";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +21,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=48";
+} from "./shop.js?v=50";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -32,7 +32,7 @@ import {
   watchRoom,
   openRooms,
   duelWinner,
-} from "./duel.js?v=48";
+} from "./duel.js?v=50";
 import {
   activeEvent,
   upcomingEvent,
@@ -40,7 +40,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=48";
+} from "./event.js?v=50";
 import {
   getNickname,
   setNickname,
@@ -59,7 +59,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=48";
+} from "./chat.js?v=50";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -844,10 +844,11 @@ let lastPrizeList = [];
 
 function renderTicker(list) {
   lastPrizeList = list ?? lastPrizeList;
+  // 꽝은 당첨이 아니므로 로그에 올리지 않는다
   const rows = [
     ...eventWinners.map((r) => ({ ...r, isEvent: true })),
     ...(lastPrizeList || []),
-  ];
+  ].filter((r) => r.prize && r.prize !== "꽝");
   if (rows.length === 0) {
     tickerEl.hidden = true;
     return;
@@ -855,10 +856,9 @@ function renderTicker(list) {
   tickerEl.hidden = false;
   tickerTrackEl.innerHTML = rows
     .map((r) => {
-      const win = r.prize && r.prize !== "꽝";
       const tag = r.isEvent ? "🔥 돌발 이벤트 " : "";
-      return `<span class="${win ? "win" : ""}">
-        ${tag}<b>${escapeHtml(r.name || "?")}</b>님 ${r.score}점 · ${escapeHtml(r.prize || "")} 달성했습니다
+      return `<span class="win">
+        ${tag}<b>${escapeHtml(r.name || "?")}</b>님 ${r.score}점 · ${escapeHtml(r.prize)} 당첨!
       </span>`;
     })
     .join("");

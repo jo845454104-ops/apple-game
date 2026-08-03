@@ -2179,3 +2179,73 @@ body {
 #duel-stake {
   min-height: 90px;
 }
+
+/* ── 상단 좌우 코너 버튼 ───────────────────── */
+.corner-bar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: -4px;
+}
+
+.corner-bar__side {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.corner-bar__side--right {
+  justify-content: flex-end;
+}
+
+.corner-btn {
+  appearance: none;
+  cursor: pointer;
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--slate-600);
+  background: var(--surface);
+  border: 1px solid var(--slate-200);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.corner-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.corner-btn--accent {
+  color: #fff;
+  background: var(--accent);
+  border-color: transparent;
+}
+
+.corner-btn--accent:hover {
+  color: #fff;
+  background: var(--accent-hover);
+}
+
+@media (max-width: 720px) {
+  .corner-bar {
+    margin-bottom: 0;
+  }
+  .corner-btn {
+    padding: 6px 9px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 400px) {
+  .corner-btn {
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+}
