@@ -194,6 +194,51 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── 멀티플레이 대결 ──────────────────────
+    // 방은 만든 사람이 시드를 정하고, 참가자는 자기 칸에만 결과를 쓴다.
+    // 점수는 리플레이 수순과 함께 남겨 나중에 진위를 확인할 수 있다.
+    match /duels/{room} {
+      allow read: if true;
+
+      // 방 만들기
+      allow create: if request.resource.data.keys().hasOnly(
+          ['host', 'hostNk', 'hostCid', 'seed', 'stake', 'pw', 'state', 'createdAt']
+        )
+        && request.resource.data.host is string
+        && request.resource.data.host.size() > 0
+        && request.resource.data.host.size() <= 12
+        && cleanName(request.resource.data.host)
+        && request.resource.data.hostCid is string
+        && notBlocked(request.resource.data.hostCid)
+        && ownsNickname(request.resource.data.hostNk, request.resource.data.hostCid)
+        && request.resource.data.seed is int
+        && request.resource.data.stake is string
+        && request.resource.data.stake.size() <= 20
+        && request.resource.data.state == 'waiting'
+        && request.resource.data.createdAt == request.time;
+
+      // 참가와 결과 제출. 방을 만든 사람 정보와 시드는 바꿀 수 없다.
+      allow update: if request.resource.data.host == resource.data.host
+        && request.resource.data.hostCid == resource.data.hostCid
+        && request.resource.data.seed == resource.data.seed
+        && request.resource.data.stake == resource.data.stake
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.get('pw', '') == resource.data.get('pw', '')
+        && request.resource.data.keys().hasOnly([
+          'host', 'hostNk', 'hostCid', 'seed', 'stake', 'pw', 'state', 'createdAt',
+          'guest', 'guestNk', 'guestCid', 'startedAt',
+          'hostScore', 'hostMoves', 'guestScore', 'guestMoves', 'settled'
+        ])
+        && (!('guestCid' in request.resource.data.keys())
+            || notBlocked(request.resource.data.guestCid))
+        && (!('hostMoves' in request.resource.data.keys())
+            || request.resource.data.hostMoves.size() <= 20000)
+        && (!('guestMoves' in request.resource.data.keys())
+            || request.resource.data.guestMoves.size() <= 20000);
+
+      allow delete: if false;
+    }
+
     // 운영자 설정. 읽기만 공개하고 변경은 관리 도구(CLI)로만 한다.
     match /config/settings {
       allow read: if true;

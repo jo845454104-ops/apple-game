@@ -1911,3 +1911,142 @@ body {
   font-weight: 700;
   margin-bottom: 16px;
 }
+
+/* ── 대결 ─────────────────────────────────── */
+.duel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.duel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.duel-field__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--slate-400);
+}
+
+.duel-field select,
+.duel-field input,
+#duel-code {
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--slate-200);
+  background: var(--surface);
+  color: var(--slate-900);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.duel-field select:focus,
+.duel-field input:focus,
+#duel-code:focus {
+  border-color: var(--accent);
+}
+
+#duel-code {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+#duel-rooms li {
+  gap: 8px;
+}
+
+.room-lock {
+  font-size: 11px;
+  color: var(--slate-400);
+}
+
+.duel-room__code {
+  text-align: center;
+  font-size: 13px;
+  color: var(--slate-600);
+  margin-bottom: 12px;
+}
+
+.duel-room__code strong {
+  font-size: 20px;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+}
+
+.duel-vs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.duel-side {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--slate-200);
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.duel-side.is-winner {
+  border-color: var(--apple-red);
+  background: var(--accent-soft);
+}
+
+.duel-side__label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--slate-400);
+}
+
+.duel-side__name {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-side__score {
+  display: block;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.duel-vs__mark {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--slate-400);
+  flex-shrink: 0;
+}
+
+.duel-stake {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--apple-red);
+  margin-bottom: 8px;
+  min-height: 16px;
+}
+
+.duel-room__msg {
+  text-align: center;
+  font-size: 13px;
+  color: var(--slate-600);
+  margin-bottom: 14px;
+  min-height: 20px;
+}

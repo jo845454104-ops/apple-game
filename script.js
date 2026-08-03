@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=45";
-import { findTargeted } from "./profanity.js?v=45";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=46";
+import { findTargeted } from "./profanity.js?v=46";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,18 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=45";
-import { nicknameKey } from "./profanity.js?v=45";
+} from "./roulette.js?v=46";
+import { nicknameKey } from "./profanity.js?v=46";
+import {
+  makeRoomCode,
+  myStakes,
+  createRoom,
+  joinRoom,
+  submitResult,
+  watchRoom,
+  openRooms,
+  duelWinner,
+} from "./duel.js?v=46";
 import {
   activeEvent,
   upcomingEvent,
@@ -20,7 +30,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=45";
+} from "./event.js?v=46";
 import {
   getNickname,
   setNickname,
@@ -39,7 +49,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=45";
+} from "./chat.js?v=46";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -120,12 +130,14 @@ function formatTime(sec) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function buildGrid() {
+function buildGrid(fixedSeed) {
   gridEl.innerHTML = "";
   apples = [];
   clearedCount = 0;
 
-  boardSeed = Math.floor(Math.random() * 2147483647);
+  boardSeed = Number.isInteger(fixedSeed)
+    ? fixedSeed
+    : Math.floor(Math.random() * 2147483647);
   moves = [];
   const values = boardFromSeed(boardSeed, COLS * ROWS);
 
@@ -290,7 +302,7 @@ function tick() {
   }
 }
 
-function startGame() {
+function startGame(fixedSeed) {
   if (isBlocked()) {
     lockOut(isBlocked());
     return;
@@ -319,7 +331,7 @@ function startGame() {
   submitScoreBtnFixed.disabled = false;
   renderScoreNameArea();
 
-  buildGrid();
+  buildGrid(fixedSeed);
   clearSelectionVisual();
 
   window.clearInterval(timerId);
@@ -342,6 +354,14 @@ function endGame(cleared) {
   finalScoreEl.textContent = score;
   renderScoreNameArea();
   endOverlay.hidden = false;
+
+  // 대결 판이면 결과를 방에 올린다
+  if (duelMode && duelRoom) {
+    duelMode = false;
+    submitResult({ code: duelRoom.code, isHost: duelIsHost, score, moves })
+      .then(() => { duelModal.hidden = false; })
+      .catch((err) => console.error("대결 결과 전송 실패", err));
+  }
 
   // 돌발 이벤트가 진행 중이고 목표를 넘겼으면 바로 상품을 준다
   const ev = activeEvent();
@@ -1016,6 +1036,206 @@ async function handleReplayClick(e) {
 }
 myStatsListEl.addEventListener("click", handleReplayClick);
 rankingList.addEventListener("click", handleReplayClick);
+
+// ── 대결 ───────────────────────────────────
+const duelBtn = document.getElementById("duel-btn");
+const duelModal = document.getElementById("duel-modal");
+const duelCloseBtn = document.getElementById("duel-close");
+const duelLobbyEl = document.getElementById("duel-lobby");
+const duelRoomEl = document.getElementById("duel-room");
+const duelStakeSel = document.getElementById("duel-stake");
+const duelPwInput = document.getElementById("duel-pw");
+const duelCreateBtn = document.getElementById("duel-create");
+const duelCodeInput = document.getElementById("duel-code");
+const duelJoinBtn = document.getElementById("duel-join");
+const duelRoomsEl = document.getElementById("duel-rooms");
+const duelStatusEl = document.getElementById("duel-status");
+const duelRoomCodeEl = document.getElementById("duel-room-code");
+const duelHostNameEl = document.getElementById("duel-host-name");
+const duelHostScoreEl = document.getElementById("duel-host-score");
+const duelGuestNameEl = document.getElementById("duel-guest-name");
+const duelGuestScoreEl = document.getElementById("duel-guest-score");
+const duelRoomStakeEl = document.getElementById("duel-room-stake");
+const duelRoomMsgEl = document.getElementById("duel-room-msg");
+const duelStartBtn = document.getElementById("duel-start");
+const duelLeaveBtn = document.getElementById("duel-leave");
+
+let duelRoom = null;      // 지금 들어가 있는 방
+let duelIsHost = false;
+let duelUnwatch = null;
+let duelMode = false;     // 대결용 판인지
+
+function showDuelLobby() {
+  duelLobbyEl.hidden = false;
+  duelRoomEl.hidden = true;
+}
+
+async function fillStakeOptions() {
+  const nick = getNickname();
+  duelStakeSel.innerHTML = '<option value="없음">걸지 않음</option>';
+  if (!nick) return;
+  const list = await myStakes(nicknameKey(nick));
+  list.forEach((p) => {
+    const opt = document.createElement("option");
+    opt.value = p.prize;
+    opt.textContent = `${p.prize} (${p.from})`;
+    duelStakeSel.appendChild(opt);
+  });
+}
+
+async function renderOpenRooms() {
+  duelRoomsEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
+  const rooms = await openRooms(15);
+  if (rooms.length === 0) {
+    duelRoomsEl.innerHTML = '<li class="ranking-empty">열려 있는 방이 없습니다.</li>';
+    return;
+  }
+  duelRoomsEl.innerHTML = rooms
+    .map(
+      (r) => `<li>
+        <span class="rank">${r.pw ? "🔒" : "🔓"}</span>
+        <span class="name">${escapeHtml(r.host)}
+          <span class="online-list__code">${escapeHtml(r.code)} · 건 것: ${escapeHtml(r.stake || "없음")}</span>
+        </span>
+        <button type="button" class="block-btn" data-room="${escapeHtml(r.code)}">참가</button>
+      </li>`
+    )
+    .join("");
+}
+
+function renderDuelRoom(room) {
+  if (!room) {
+    duelStatusEl.textContent = "방이 사라졌습니다.";
+    showDuelLobby();
+    return;
+  }
+  duelRoom = room;
+  duelLobbyEl.hidden = true;
+  duelRoomEl.hidden = false;
+
+  duelRoomCodeEl.textContent = room.code;
+  duelHostNameEl.textContent = room.host || "-";
+  duelGuestNameEl.textContent = room.guest || "기다리는 중…";
+  duelHostScoreEl.textContent = room.hostScore ?? "-";
+  duelGuestScoreEl.textContent = room.guestScore ?? "-";
+  duelRoomStakeEl.textContent =
+    room.stake && room.stake !== "없음" ? `🎁 걸린 당첨권: ${room.stake}` : "";
+
+  const winner = duelWinner(room);
+  document.getElementById("duel-side-host").classList.toggle("is-winner", winner === "host");
+  document.getElementById("duel-side-guest").classList.toggle("is-winner", winner === "guest");
+
+  const myScore = duelIsHost ? room.hostScore : room.guestScore;
+  if (winner) {
+    const label =
+      winner === "draw"
+        ? "무승부!"
+        : (winner === "host" ? room.host : room.guest) + " 님 승리!";
+    duelRoomMsgEl.textContent = `🏁 ${label}`;
+    duelStartBtn.hidden = true;
+  } else if (!room.guest) {
+    duelRoomMsgEl.textContent = "상대를 기다리고 있습니다";
+    duelStartBtn.hidden = true;
+  } else if (typeof myScore === "number") {
+    duelRoomMsgEl.textContent = "상대가 끝내기를 기다리는 중…";
+    duelStartBtn.hidden = true;
+  } else {
+    duelRoomMsgEl.textContent = "준비되면 시작하세요. 같은 배치로 겨룹니다.";
+    duelStartBtn.hidden = false;
+  }
+}
+
+async function enterRoom(room, isHost) {
+  duelIsHost = isHost;
+  duelUnwatch?.();
+  duelUnwatch = await watchRoom(room.code, renderDuelRoom);
+  renderDuelRoom(room);
+}
+
+duelBtn.addEventListener("click", async () => {
+  duelModal.hidden = false;
+  if (!duelRoom) {
+    showDuelLobby();
+    duelStatusEl.textContent = "";
+    await fillStakeOptions();
+    renderOpenRooms();
+  }
+});
+
+duelCloseBtn.addEventListener("click", () => { duelModal.hidden = true; });
+duelModal.addEventListener("click", (e) => {
+  if (e.target === duelModal) duelModal.hidden = true;
+});
+
+duelCreateBtn.addEventListener("click", async () => {
+  const nick = getNickname();
+  if (!nick) { duelStatusEl.textContent = "닉네임을 먼저 정하세요."; return; }
+  duelCreateBtn.disabled = true;
+  duelStatusEl.textContent = "방을 만드는 중...";
+  try {
+    const code = makeRoomCode();
+    const seed = Math.floor(Math.random() * 2147483647);
+    await createRoom({
+      code, name: nick, nickKey: nicknameKey(nick), seed,
+      stake: duelStakeSel.value,
+      password: duelPwInput.value.trim(),
+    });
+    duelPwInput.value = "";
+    await enterRoom({ code, host: nick, hostCid: "", seed, stake: duelStakeSel.value, state: "waiting" }, true);
+  } catch (err) {
+    duelStatusEl.textContent = err.message;
+  } finally {
+    duelCreateBtn.disabled = false;
+  }
+});
+
+async function doJoin(code) {
+  const nick = getNickname();
+  if (!nick) { duelStatusEl.textContent = "닉네임을 먼저 정하세요."; return; }
+  let password = "";
+  try {
+    const peek = await openRooms(50);
+    const target = peek.find((r) => r.code === code);
+    if (target?.pw) password = window.prompt("방 비밀번호를 입력하세요") || "";
+  } catch {
+    /* 목록 조회 실패 시에는 비밀번호 없이 시도한다 */
+  }
+  duelStatusEl.textContent = "참가하는 중...";
+  try {
+    const room = await joinRoom({ code, name: nick, nickKey: nicknameKey(nick), password });
+    await enterRoom({ ...room, code, guest: nick, state: "playing" }, false);
+  } catch (err) {
+    duelStatusEl.textContent = err.message;
+  }
+}
+
+duelJoinBtn.addEventListener("click", () => {
+  const code = duelCodeInput.value.trim().toUpperCase();
+  if (code.length !== 5) { duelStatusEl.textContent = "방 번호 5자리를 입력하세요."; return; }
+  doJoin(code);
+});
+
+duelRoomsEl.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-room]");
+  if (btn) doJoin(btn.dataset.room);
+});
+
+duelLeaveBtn.addEventListener("click", () => {
+  duelUnwatch?.();
+  duelUnwatch = null;
+  duelRoom = null;
+  duelMode = false;
+  showDuelLobby();
+  renderOpenRooms();
+});
+
+// 대결 시작: 방의 시드로 판을 깔고 평소처럼 2분간 플레이한다
+duelStartBtn.addEventListener("click", () => {
+  if (!duelRoom) return;
+  duelMode = true;
+  duelModal.hidden = true;
+  startGame(duelRoom.seed);
+});
 
 // ── 돌발 이벤트 ────────────────────────────
 const eventBannerEl = document.getElementById("event-banner");

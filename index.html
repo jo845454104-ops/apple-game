@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>🍎 사과게임 - DSA 아카데미</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=45" />
+  <link rel="stylesheet" href="style.css?v=46" />
   <script>
     // 스타일이 적용되기 전에 테마를 정해 화면이 번쩍이는 것을 막는다.
     try {
@@ -50,6 +50,7 @@
       <button type="button" class="ghost-btn" id="ranking-btn">🏆 랭킹</button>
       <button type="button" class="ghost-btn" id="myprize-btn">🎫 내 당첨권</button>
       <button type="button" class="ghost-btn" id="mystats-btn">📊 내 기록실</button>
+      <button type="button" class="ghost-btn" id="duel-btn">⚔️ 대결</button>
       <button type="button" class="ghost-btn" id="reset-btn">Reset</button>
     </div>
 
@@ -206,6 +207,67 @@
     </div>
   </div>
 
+  <div class="modal" id="duel-modal" hidden>
+    <div class="modal__card">
+      <div class="modal__header">
+        <h2>⚔️ 대결</h2>
+        <button type="button" class="modal__close" id="duel-close">&times;</button>
+      </div>
+
+      <div id="duel-lobby">
+        <p class="modal__status">같은 배치로 겨룹니다. 당첨권을 걸 수도 있어요.</p>
+
+        <h3 class="admin-subtitle">방 만들기</h3>
+        <div class="duel-form">
+          <label class="duel-field">
+            <span class="duel-field__label">걸 당첨권</span>
+            <select id="duel-stake"></select>
+          </label>
+          <label class="duel-field">
+            <span class="duel-field__label">비밀번호 (비우면 공개방)</span>
+            <input type="text" id="duel-pw" maxlength="12" placeholder="선택 사항" autocomplete="off" />
+          </label>
+          <button type="button" class="admin-btn" id="duel-create">방 만들기</button>
+        </div>
+
+        <h3 class="admin-subtitle">참가하기</h3>
+        <div class="duel-form">
+          <div class="nick-setup__row">
+            <input type="text" id="duel-code" maxlength="5" placeholder="방 번호 5자리" autocomplete="off" />
+            <button type="button" class="admin-btn" id="duel-join">참가</button>
+          </div>
+        </div>
+
+        <h3 class="admin-subtitle">열려 있는 방</h3>
+        <ol class="ranking-list" id="duel-rooms"></ol>
+        <p class="admin-status" id="duel-status"></p>
+      </div>
+
+      <div id="duel-room" hidden>
+        <p class="duel-room__code">방 번호 <strong id="duel-room-code">-</strong></p>
+        <div class="duel-vs">
+          <div class="duel-side" id="duel-side-host">
+            <span class="duel-side__label">방장</span>
+            <span class="duel-side__name" id="duel-host-name">-</span>
+            <span class="duel-side__score" id="duel-host-score">-</span>
+          </div>
+          <span class="duel-vs__mark">VS</span>
+          <div class="duel-side" id="duel-side-guest">
+            <span class="duel-side__label">도전자</span>
+            <span class="duel-side__name" id="duel-guest-name">기다리는 중…</span>
+            <span class="duel-side__score" id="duel-guest-score">-</span>
+          </div>
+        </div>
+        <p class="duel-stake" id="duel-room-stake"></p>
+        <p class="duel-room__msg" id="duel-room-msg">상대를 기다리고 있습니다</p>
+        <div class="roulette__actions">
+          <button type="button" class="play-btn" id="duel-start" hidden>대결 시작</button>
+          <button type="button" class="play-btn small" id="duel-leave">나가기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="mystats-modal" hidden>
     <div class="modal__card">
       <div class="modal__header">
@@ -304,6 +366,6 @@
 
   <!-- v 값은 파일을 고칠 때마다 올린다. 브라우저 캐시 때문에 HTML만 새것이고
        스크립트는 옛것인 상태가 생기지 않도록 모든 모듈에 같은 값을 붙인다. -->
-  <script type="module" src="script.js?v=45"></script>
+  <script type="module" src="script.js?v=46"></script>
 </body>
 </html>
