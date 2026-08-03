@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=52";
-import { findTargeted } from "./profanity.js?v=52";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=53";
+import { findTargeted } from "./profanity.js?v=53";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=52";
-import { nicknameKey } from "./profanity.js?v=52";
+} from "./roulette.js?v=53";
+import { nicknameKey } from "./profanity.js?v=53";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +21,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=52";
+} from "./shop.js?v=53";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -34,7 +34,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=52";
+} from "./duel.js?v=53";
 import {
   activeEvent,
   upcomingEvent,
@@ -42,7 +42,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=52";
+} from "./event.js?v=53";
 import {
   getNickname,
   setNickname,
@@ -61,7 +61,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=52";
+} from "./chat.js?v=53";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1103,6 +1103,7 @@ async function renderMyTickets() {
 
 shopBtn.addEventListener("click", () => {
   shopModal.hidden = false;
+  createStakes = [];
   shopStatusEl.textContent = "";
   verifyResultEl.hidden = true;
   renderShopCards();
@@ -1335,6 +1336,65 @@ tradeAddSel.addEventListener("click", async (e) => {
   }
 });
 
+const duelResultEl = document.getElementById("duel-result");
+const duelResultCard = duelResultEl.querySelector(".duel-result__card");
+const duelResultIcon = document.getElementById("duel-result-icon");
+const duelResultTitle = document.getElementById("duel-result-title");
+const duelResultScore = document.getElementById("duel-result-score");
+const duelResultLoot = document.getElementById("duel-result-loot");
+const duelResultLootList = document.getElementById("duel-result-loot-list");
+
+document.getElementById("duel-result-close").addEventListener("click", () => {
+  duelResultEl.hidden = true;
+});
+
+let shownResult = null;
+
+function showDuelResult(room, winner) {
+  if (shownResult === room.code) return;
+  shownResult = room.code;
+
+  const iWon = (winner === "host") === duelIsHost;
+  const myScore = duelIsHost ? room.hostScore : room.guestScore;
+  const foeScore = duelIsHost ? room.guestScore : room.hostScore;
+
+  duelResultCard.className = "modal__card duel-result__card";
+  if (winner === "draw") {
+    duelResultCard.classList.add("is-draw");
+    duelResultIcon.textContent = "🤝";
+    duelResultTitle.textContent = "무승부";
+  } else if (iWon) {
+    duelResultCard.classList.add("is-win");
+    duelResultIcon.textContent = isForfeitWin(room) ? "🏳️" : "🏆";
+    duelResultTitle.textContent = isForfeitWin(room) ? "상대 기권 · 승리!" : "승리!";
+  } else {
+    duelResultCard.classList.add("is-lose");
+    duelResultIcon.textContent = "😢";
+    duelResultTitle.textContent = isForfeitWin(room) ? "기권 · 패배" : "패배";
+  }
+
+  duelResultScore.textContent =
+    typeof myScore === "number" && typeof foeScore === "number"
+      ? `내 점수 ${myScore}점 · 상대 ${foeScore}점`
+      : "";
+
+  // 이겼고 상대가 건 것이 있으면 획득 목록을 보여준다
+  const loot = winner === "host" ? room.guestStakes : room.hostStakes;
+  if (iWon && winner !== "draw" && loot?.length) {
+    duelResultLootList.innerHTML = loot
+      .map((serial) => {
+        const p = prettySerial(serial);
+        return `<li>${escapeHtml(p.title)}<br /><span class="ticket-serial">${p.code}</span></li>`;
+      })
+      .join("");
+    duelResultLoot.hidden = false;
+  } else {
+    duelResultLoot.hidden = true;
+  }
+
+  duelResultEl.hidden = false;
+}
+
 // 대결이 끝나면 진 쪽의 증정권을 이긴 쪽으로 넘긴다
 let settledRoom = null;
 async function settleDuel(room) {
@@ -1400,6 +1460,7 @@ function renderDuelRoom(room) {
       ? `🏳️ 상대가 나갔습니다 · ${label}`
       : `🏁 ${label}`;
     duelStartBtn.hidden = true;
+    showDuelResult(room, winner);
     settleDuel(room);
   } else if (!room.guest) {
     duelRoomMsgEl.textContent = "상대를 기다리고 있습니다";
@@ -1415,6 +1476,8 @@ function renderDuelRoom(room) {
 
 async function enterRoom(room, isHost) {
   duelIsHost = isHost;
+  shownResult = null;
+  settledRoom = null;
   duelUnwatch?.();
   duelUnwatch = await watchRoom(room.code, renderDuelRoom);
   renderDuelRoom(room);
@@ -1425,6 +1488,7 @@ duelBtn.addEventListener("click", async () => {
   if (!duelRoom) {
     showDuelLobby();
     duelStatusEl.textContent = "";
+    createStakes = [];
     await fillStakeOptions();
     renderOpenRooms();
   }

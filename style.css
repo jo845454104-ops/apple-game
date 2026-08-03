@@ -2383,3 +2383,52 @@ body {
   .countdown__num { font-size: 80px; }
   .countdown__num.is-go { font-size: 56px; }
 }
+
+/* ── 대결 결과 ────────────────────────────── */
+.duel-result { z-index: 955; }
+
+.duel-result__card {
+  max-width: 330px;
+  text-align: center;
+  border: 2px solid var(--slate-200);
+}
+
+.duel-result__card.is-win { border-color: #f59e0b; }
+.duel-result__card.is-lose { border-color: var(--slate-400); }
+.duel-result__card.is-draw { border-color: var(--accent); }
+
+.duel-result__icon { font-size: 52px; margin-bottom: 4px; }
+
+.duel-result__title {
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.is-win .duel-result__title { color: #f59e0b; }
+.is-lose .duel-result__title { color: var(--slate-400); }
+.is-draw .duel-result__title { color: var(--accent); }
+
+.duel-result__score {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--slate-600);
+  margin-bottom: 14px;
+}
+
+.duel-result__loot {
+  background: var(--accent-soft);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 14px;
+}
+
+.duel-result__loot[hidden] { display: none; }
+
+.duel-result__loot-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
