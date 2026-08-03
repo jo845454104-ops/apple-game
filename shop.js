@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=53";
-import { getClientId } from "./chat.js?v=53";
+import { getFirestoreApi } from "./firebase-app.js?v=55";
+import { getClientId } from "./chat.js?v=55";
 
 // 개인이 자기 이름으로 발급하는 증정권
 // 일련번호가 곧 문서 ID다. "닉네임__종류__회차" 형태로 고정해서
@@ -9,7 +9,7 @@ const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const TICKET_KINDS = {
-  COFFEE: { label: "커피권", emoji: "☕", everyDays: 0, note: "1인 1장" },
+  COFFEE: { label: "커피권", emoji: "☕", everyDays: 1, note: "1일에 1장" },
   DATE: { label: "데이트권", emoji: "💕", everyDays: 3, note: "3일에 1장" },
   MEAL: { label: "식사권", emoji: "🍱", everyDays: 7, note: "7일에 1장" },
 };

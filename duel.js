@@ -1,7 +1,7 @@
-import { getFirestoreApi } from "./firebase-app.js?v=53";
-import { getClientId } from "./chat.js?v=53";
-import { fetchMyPrizes } from "./roulette.js?v=53";
-import { fetchMyEventPrizes } from "./event.js?v=53";
+import { getFirestoreApi } from "./firebase-app.js?v=55";
+import { getClientId } from "./chat.js?v=55";
+import { fetchMyPrizes } from "./roulette.js?v=55";
+import { fetchMyEventPrizes } from "./event.js?v=55";
 
 // 멀티플레이 대결
 // 방을 만들면 시드가 정해지고, 두 사람이 같은 배치로 겨룬다.
@@ -149,6 +149,26 @@ export async function openRooms(limit = 15) {
   return snap.docs
     .map((d) => ({ code: d.id, ...d.data() }))
     .filter((r) => r.state === "waiting" && r.hostCid !== getClientId())
+    .slice(0, limit);
+}
+
+// 끝난 대결의 기록.
+// 방 문서에 점수와 수순이 그대로 남으므로 따로 저장할 것이 없다.
+// 누가 무엇을 걸고 어떻게 됐는지, 리플레이까지 여기서 다 나온다.
+export async function recentDuels(limit = 20) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return [];
+  const { db, api } = ctx;
+  const snap = await api.getDocs(
+    api.query(
+      api.collection(db, "duels"),
+      api.orderBy("createdAt", "desc"),
+      api.limit(60)
+    )
+  );
+  return snap.docs
+    .map((d) => ({ code: d.id, ...d.data() }))
+    .filter((r) => r.guest && duelWinner(r))
     .slice(0, limit);
 }
 

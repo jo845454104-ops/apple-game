@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=53";
-import { findTargeted } from "./profanity.js?v=53";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=55";
+import { findTargeted } from "./profanity.js?v=55";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=53";
-import { nicknameKey } from "./profanity.js?v=53";
+} from "./roulette.js?v=55";
+import { nicknameKey } from "./profanity.js?v=55";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +21,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=53";
+} from "./shop.js?v=55";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -31,10 +31,11 @@ import {
   submitResult,
   watchRoom,
   openRooms,
+  recentDuels,
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=53";
+} from "./duel.js?v=55";
 import {
   activeEvent,
   upcomingEvent,
@@ -42,7 +43,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=53";
+} from "./event.js?v=55";
 import {
   getNickname,
   setNickname,
@@ -61,7 +62,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=53";
+} from "./chat.js?v=55";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1278,6 +1279,103 @@ async function renderOpenRooms() {
     .join("");
 }
 
+// ── 대전 기록 ────────────────────────────
+// 끝난 대결을 누가 무엇을 걸고 어떻게 됐는지까지 남긴다.
+// 리플레이 버튼으로 양쪽 수순을 그대로 다시 볼 수 있다.
+const duelLogEl = document.getElementById("duel-log");
+let duelLogCache = [];
+
+function logStakeText(list) {
+  if (!list || list.length === 0) return "건 것 없음";
+  return list.map((serial) => prettySerial(serial).title).join(", ");
+}
+
+function logWhen(ts) {
+  const ms = ts?.toMillis ? ts.toMillis() : ts?.seconds ? ts.seconds * 1000 : 0;
+  if (!ms) return "";
+  const d = new Date(ms);
+  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+async function renderDuelLog() {
+  duelLogEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
+  const rooms = await recentDuels(20);
+  duelLogCache = rooms;
+  if (rooms.length === 0) {
+    duelLogEl.innerHTML = '<li class="ranking-empty">아직 끝난 대결이 없습니다.</li>';
+    return;
+  }
+
+  duelLogEl.innerHTML = rooms
+    .map((r) => {
+      const winner = duelWinner(r);
+      const hostWon = winner === "host";
+      const guestWon = winner === "guest";
+      // 진 쪽이 건 것이 이긴 쪽으로 넘어갔다.
+      // 아무것도 안 걸었으면 넘어간 것도 없으니 이 줄은 빼둔다.
+      const loot = hostWon ? r.guestStakes : r.hostStakes;
+      const moved = winner === "draw" || !loot?.length
+        ? ""
+        : `<span class="duel-log__loot">🎁 ${escapeHtml(
+            logStakeText(loot)
+          )} → ${escapeHtml(hostWon ? r.host : r.guest)}</span>`;
+
+      const side = (who, name, score, stakes, won, hasMoves) => `
+        <div class="duel-log__side${won ? " is-winner" : ""}">
+          <span class="duel-log__name">${won ? "👑 " : ""}${escapeHtml(name || "-")}</span>
+          <span class="duel-log__score">${typeof score === "number" ? `${score}점` : "-"}</span>
+          <span class="duel-log__stake">${escapeHtml(logStakeText(stakes))}</span>
+          ${hasMoves
+            ? `<button type="button" class="replay-btn" data-duel="${escapeHtml(r.code)}" data-side="${who}">🎬</button>`
+            : ""}
+        </div>`;
+
+      return `<li>
+        <div class="duel-log__head">
+          <span class="duel-log__code">${escapeHtml(r.code)}</span>
+          <span class="duel-log__when">${escapeHtml(logWhen(r.createdAt))}</span>
+          ${r.forfeit ? '<span class="duel-log__tag">🏳️ 기권</span>' : ""}
+          ${winner === "draw" ? '<span class="duel-log__tag">🤝 무승부</span>' : ""}
+        </div>
+        <div class="duel-log__body">
+          ${side("host", r.host, r.hostScore, r.hostStakes, hostWon, Boolean(r.hostMoves))}
+          <span class="duel-log__vs">VS</span>
+          ${side("guest", r.guest, r.guestScore, r.guestStakes, guestWon, Boolean(r.guestMoves))}
+        </div>
+        ${moved}
+      </li>`;
+    })
+    .join("");
+}
+
+duelLogEl.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-duel]");
+  if (!btn) return;
+  const room = duelLogCache.find((r) => r.code === btn.dataset.duel);
+  if (!room) return;
+
+  const isHost = btn.dataset.side === "host";
+  const moves = isHost ? room.hostMoves : room.guestMoves;
+  if (!moves) return;
+
+  // 대결에는 따로 소요 시간을 남기지 않아 마지막 수순 시각으로 대신한다
+  let durationMs = 0;
+  try {
+    const parsed = JSON.parse(moves);
+    durationMs = parsed.length ? parsed[parsed.length - 1][0] : 0;
+  } catch {
+    durationMs = 0;
+  }
+
+  openReplay({
+    name: isHost ? room.host : room.guest,
+    score: isHost ? room.hostScore : room.guestScore,
+    moves,
+    seed: room.seed,
+    durationMs,
+  });
+});
+
 const tradeHostList = document.getElementById("trade-host-list");
 const tradeGuestList = document.getElementById("trade-guest-list");
 const tradeHostLabel = document.getElementById("trade-host-label");
@@ -1491,6 +1589,7 @@ duelBtn.addEventListener("click", async () => {
     createStakes = [];
     await fillStakeOptions();
     renderOpenRooms();
+    renderDuelLog();
   }
 });
 
@@ -1573,6 +1672,7 @@ duelLeaveBtn.addEventListener("click", async () => {
   duelMode = false;
   showDuelLobby();
   renderOpenRooms();
+  renderDuelLog();
 });
 
 // 대결 시작 전 5초를 세어 양쪽이 같은 호흡으로 출발하게 한다

@@ -818,7 +818,10 @@ body {
   font-size: 14px;
 }
 
-.ranking-list li:first-child {
+/* 1등 강조는 진짜 랭킹에만 준다.
+   .ranking-list 모양새는 증정권·대결방·기록실 등에서도 함께 쓰는데,
+   거기서는 첫 줄이 선택된 것처럼 보여서 헷갈린다. */
+#ranking-list li:first-child {
   background: var(--accent-soft);
   border-color: rgba(62, 67, 230, 0.3);
 }
@@ -2431,4 +2434,112 @@ body {
   font-weight: 700;
   color: var(--accent);
   margin-bottom: 6px;
+}
+
+/* ── 대전 기록 ────────────────────────────── */
+.duel-log {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.duel-log li {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--slate-200);
+}
+
+.duel-log__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--slate-400);
+}
+
+.duel-log__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.duel-log__when { margin-right: auto; }
+
+.duel-log__tag {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.duel-log__body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.duel-log__side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid transparent;
+}
+
+.duel-log__side.is-winner {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.duel-log__name {
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-log__score {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--apple-red);
+  font-variant-numeric: tabular-nums;
+}
+
+.duel-log__stake {
+  font-size: 11px;
+  color: var(--slate-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duel-log__side .replay-btn {
+  margin-left: 0;
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.duel-log__vs {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--slate-400);
+}
+
+.duel-log__loot {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
 }
