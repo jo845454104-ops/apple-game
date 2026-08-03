@@ -2326,3 +2326,60 @@ body {
   text-align: center;
   padding: 10px 0;
 }
+
+/* ── 대결 시작 카운트다운 ─────────────────── */
+.countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+.countdown[hidden] { display: none; }
+
+.countdown__inner { text-align: center; }
+
+.countdown__label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  opacity: 0.85;
+  letter-spacing: 0.1em;
+}
+
+.countdown__num {
+  font-size: 110px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 40px rgba(129, 140, 248, 0.8);
+  animation: countPop 1s ease-out;
+}
+
+.countdown__num.is-go {
+  font-size: 76px;
+  color: #4ade80;
+  text-shadow: 0 0 40px rgba(74, 222, 128, 0.9);
+}
+
+.countdown__hint {
+  font-size: 14px;
+  color: #fff;
+  opacity: 0.7;
+}
+
+@keyframes countPop {
+  0% { transform: scale(1.6); opacity: 0; }
+  30% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 720px) {
+  .countdown__num { font-size: 80px; }
+  .countdown__num.is-go { font-size: 56px; }
+}

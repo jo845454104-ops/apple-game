@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=51";
-import { findTargeted } from "./profanity.js?v=51";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=52";
+import { findTargeted } from "./profanity.js?v=52";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=51";
-import { nicknameKey } from "./profanity.js?v=51";
+} from "./roulette.js?v=52";
+import { nicknameKey } from "./profanity.js?v=52";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +21,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=51";
+} from "./shop.js?v=52";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -34,7 +34,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=51";
+} from "./duel.js?v=52";
 import {
   activeEvent,
   upcomingEvent,
@@ -42,7 +42,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=51";
+} from "./event.js?v=52";
 import {
   getNickname,
   setNickname,
@@ -61,7 +61,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=51";
+} from "./chat.js?v=52";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1511,12 +1511,45 @@ duelLeaveBtn.addEventListener("click", async () => {
   renderOpenRooms();
 });
 
+// 대결 시작 전 5초를 세어 양쪽이 같은 호흡으로 출발하게 한다
+const countdownEl = document.getElementById("countdown");
+const countdownNumEl = document.getElementById("countdown-num");
+
+function runCountdown(seconds, onDone) {
+  let left = seconds;
+  countdownNumEl.classList.remove("is-go");
+  countdownNumEl.textContent = left;
+  countdownEl.hidden = false;
+
+  const tick = window.setInterval(() => {
+    left -= 1;
+    if (left > 0) {
+      countdownNumEl.textContent = left;
+      // 애니메이션을 다시 태운다
+      countdownNumEl.style.animation = "none";
+      countdownNumEl.offsetHeight;
+      countdownNumEl.style.animation = "";
+      return;
+    }
+    window.clearInterval(tick);
+    countdownNumEl.textContent = "시작!";
+    countdownNumEl.classList.add("is-go");
+    window.setTimeout(() => {
+      countdownEl.hidden = true;
+      onDone();
+    }, 700);
+  }, 1000);
+}
+
 // 대결 시작: 방의 시드로 판을 깔고 평소처럼 2분간 플레이한다
 duelStartBtn.addEventListener("click", () => {
   if (!duelRoom) return;
-  duelMode = true;
+  const seed = duelRoom.seed;
   duelModal.hidden = true;
-  startGame(duelRoom.seed);
+  runCountdown(5, () => {
+    duelMode = true;
+    startGame(seed);
+  });
 });
 
 // ── 돌발 이벤트 ────────────────────────────

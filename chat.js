@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=51";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=51";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=51";
+import { getFirestoreApi } from "./firebase-app.js?v=52";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=52";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=52";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
