@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=42";
-import { getClientId } from "./chat.js?v=42";
-import { getFingerprint } from "./fingerprint.js?v=42";
+import { getFirestoreApi } from "./firebase-app.js?v=43";
+import { getClientId } from "./chat.js?v=43";
+import { getFingerprint } from "./fingerprint.js?v=43";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
@@ -77,6 +77,65 @@ function fetchLocalTopScores() {
     .slice(0, TOP_N);
 }
 
+// 100점을 넘는 기록은 수순(리플레이)까지 검사해서 통과해야 랭킹에 오른다.
+// 게임 자체는 막지 않는다. 검증에 걸리면 기록만 등록되지 않는다.
+export const VERIFY_MIN_SCORE = 100;
+
+function boardFromSeed(seed, total) {
+  let a = seed >>> 0;
+  const rand = () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const values = [];
+  for (let i = 0; i < total; i++) values.push(Math.floor(rand() * 9) + 1);
+  return values;
+}
+
+// 수순이 게임 규칙에 맞는지 확인한다.
+// 지운 칸들의 합이 10이어야 하고, 같은 칸을 두 번 지울 수 없으며,
+// 매칭 간격이 사람이 낼 수 있는 속도여야 한다.
+export function verifyReplay({ score, clears, durationMs, seed, moves }) {
+  if (!Array.isArray(moves) || moves.length === 0) {
+    return "리플레이 기록이 없어 검증할 수 없습니다";
+  }
+  if (moves.length !== clears) return "수순 개수가 매칭 횟수와 다릅니다";
+
+  const values = boardFromSeed(Number(seed) || 0, 170);
+  const used = new Set();
+  let total = 0;
+  let prevT = 0;
+
+  for (const move of moves) {
+    if (!Array.isArray(move) || move.length !== 2) return "수순 형식 오류";
+    const [t, idx] = move;
+    if (!Number.isFinite(t) || t < 0 || t > durationMs + 2000) {
+      return "수순 시각이 플레이 시간을 벗어납니다";
+    }
+    if (t - prevT < 200) return "사람이 낼 수 없는 속도의 연속 매칭";
+    prevT = t;
+
+    if (!Array.isArray(idx) || idx.length < 2 || idx.length > 10) {
+      return "한 번에 지운 사과 수가 비정상입니다";
+    }
+    let sum = 0;
+    for (const i of idx) {
+      if (!Number.isInteger(i) || i < 0 || i >= 170) return "칸 번호 오류";
+      if (used.has(i)) return "이미 지운 칸을 다시 지웠습니다";
+      used.add(i);
+      sum += values[i];
+    }
+    if (sum !== 10) return "합이 10이 아닌 매칭이 있습니다";
+    total += idx.length;
+  }
+
+  if (total !== score) return "수순으로 지운 사과 수가 점수와 다릅니다";
+  return null;
+}
+
 // 서버 규칙이 검증하는 값과 같은 조건을 클라이언트에서도 확인해,
 // 조작된 기록은 등록 단계에서 걸러진다.
 export function checkPlausible({ score, clears, durationMs }) {
@@ -94,6 +153,15 @@ export async function submitScore(name, score, meta = {}) {
 
   const problem = checkPlausible({ score, clears, durationMs });
   if (problem) throw new Error(problem);
+
+  // 100점을 넘으면 수순까지 맞아야 랭킹에 오른다
+  if (score > VERIFY_MIN_SCORE) {
+    const replayProblem = verifyReplay({
+      score, clears, durationMs,
+      seed: meta.seed, moves: meta.moves,
+    });
+    if (replayProblem) throw new Error(`리플레이 검증 실패: ${replayProblem}`);
+  }
 
   const ctx = await getFirestoreApi();
   if (ctx) {

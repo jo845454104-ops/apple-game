@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=42";
-import { findTargeted } from "./profanity.js?v=42";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=43";
+import { findTargeted } from "./profanity.js?v=43";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=42";
-import { nicknameKey } from "./profanity.js?v=42";
+} from "./roulette.js?v=43";
+import { nicknameKey } from "./profanity.js?v=43";
 import {
   activeEvent,
   nextEvent,
@@ -22,7 +22,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=42";
+} from "./event.js?v=43";
 import {
   getNickname,
   setNickname,
@@ -41,7 +41,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=42";
+} from "./chat.js?v=43";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -428,7 +428,9 @@ async function handleSubmitScore() {
       lockOut(err.message);
       return;
     }
-    submitStatusEl.textContent = `등록 실패: ${err.message}`;
+    submitStatusEl.textContent = err.message.startsWith("리플레이 검증 실패")
+      ? `${err.message} · 게임은 계속 즐길 수 있습니다`
+      : `등록 실패: ${err.message}`;
     submitScoreBtn.disabled = false;
     submitScoreBtnFixed.disabled = false;
   }
