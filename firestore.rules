@@ -32,6 +32,18 @@ service cloud.firestore {
       return !text.matches('^[.,!?~\\-_/\\s]+$');
     }
 
+    // 기기 ID는 클라이언트가 만든다.
+    //   Math.random().toString(36).slice(2,10) + Date.now().toString(36)
+    // 이라서 소문자·숫자만 16자 안팎이 나온다.
+    // 개발자도구로 짧거나 사람이 읽을 수 있는 값(예: 'jo')을 넣어
+    // 차단을 피하려는 시도를 여기서 거른다. 실제로 그런 사례가 있었다.
+    function realClientId(cid) {
+      return cid is string
+        && cid.size() >= 12
+        && cid.size() <= 32
+        && cid.matches('^[0-9a-z]+$');
+    }
+
     function cleanName(name) {
       return !name.lower().matches('.*(시발|씨발|시바|씨바|쉬발|쒸발|시팔|씨팔|십알|병신|븅신|빙신|등신|좆|좇|존나|졸라|존만|지랄|니미|애미|애비|느금|새끼|쌔끼|새기|개새|개년|개놈|썅|쌍놈|쌍년|미친놈|미친년|또라이|돌아이|보지|자지|꼬추|섹스|야동|강간|젖탱|게이|레즈|호모|트젠|장애인|찐따|일베|틀딱|급식충|맘충|한남|김치녀|자살|꺼져|fuck|shit|bitch|asshole|dick|pussy|gay|fag|정식).*');
     }
@@ -44,8 +56,7 @@ service cloud.firestore {
         )
         && request.resource.data.get('moves', '').size() <= 20000
         && notBlocked(request.resource.data.get('fp', 'none'))
-        && request.resource.data.cid is string
-        && request.resource.data.cid.size() > 0
+        && realClientId(request.resource.data.cid)
         && notBlocked(request.resource.data.cid)
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
@@ -80,8 +91,7 @@ service cloud.firestore {
         && request.resource.data.text.size() <= 200
         && request.resource.data.keys().hasOnly(['name', 'text', 'cid', 'nk', 'fp', 'createdAt'])
         && notBlocked(request.resource.data.get('fp', 'none'))
-        && request.resource.data.cid is string
-        && request.resource.data.cid.size() > 0
+        && realClientId(request.resource.data.cid)
         && notBlocked(request.resource.data.cid)
         && chatOpen()
         && notSpam(request.resource.data.text)
@@ -97,13 +107,45 @@ service cloud.firestore {
     match /nicknames/{nick} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasOnly(['owner', 'createdAt'])
-        && request.resource.data.owner is string
-        && request.resource.data.owner.size() <= 64
+        && realClientId(request.resource.data.owner)
         && request.resource.data.createdAt == request.time
         && cleanName(nick)
         && nick.size() > 0
         && nick.size() <= 12;
       allow update, delete: if false;
+    }
+
+    // ── 입장 코드 ────────────────────────────
+    // 운영자가 CLI로 발급한 코드를 가진 사람만 들어온다.
+    // 코드 하나는 한 기기만 쓴다. 이미 쓰는 사람이 있으면 나중 사람이 거부된다.
+    //
+    // get 은 열고 list 는 막는 것이 핵심이다.
+    // 목록을 열면 아무나 미사용 코드를 쓸어가 이 장치가 통째로 무의미해진다.
+    // 코드를 아는 사람만 그 문서 하나를 확인할 수 있다.
+    match /passes/{code} {
+      allow get: if true;
+      allow list: if false;
+      // 발급·회수는 운영자 도구(CLI/콘솔)로만 한다.
+      // 웹에 열면 학생이 자기 코드를 얼마든지 만들 수 있다.
+      allow create, delete: if false;
+
+      // 자리 잡기와 신호 갱신만 허용한다.
+      allow update: if request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['holder', 'holderNk', 'lastSeen'])
+        && request.resource.data.holder is string
+        && request.resource.data.lastSeen == request.time
+        && (
+          // 자리를 비우는 것은 언제나 된다
+          request.resource.data.holder == ''
+          // 빈자리이거나, 내 자리를 이어서 쓰거나,
+          || resource.data.get('holder', '') == ''
+          || resource.data.get('holder', '') == request.resource.data.holder
+          // 앞사람이 90초 넘게 신호가 없으면 이어받는다
+          || resource.data.get('lastSeen', request.time) < request.time - duration.value(90, 's')
+        )
+        // 자리 주인도 정상 기기 ID여야 한다 (빈 값은 자리 비우기)
+        && (request.resource.data.holder == ''
+            || realClientId(request.resource.data.holder));
     }
 
     // 차단 목록.
@@ -148,7 +190,7 @@ service cloud.firestore {
         && request.resource.data.score is number
         && request.resource.data.score >= 100
         && request.resource.data.score <= 170
-        && request.resource.data.cid is string
+        && realClientId(request.resource.data.cid)
         && notBlocked(request.resource.data.cid)
         && notBlocked(request.resource.data.get('fp', 'none'))
         // 그 닉네임을 선점한 기기만 그 닉네임으로 룰렛을 돌릴 수 있다.
@@ -186,7 +228,7 @@ service cloud.firestore {
         // 평일만 (1=월 ~ 5=금)
         && request.time.dayOfWeek() >= 1
         && request.time.dayOfWeek() <= 5
-        && request.resource.data.cid is string
+        && realClientId(request.resource.data.cid)
         && notBlocked(request.resource.data.cid)
         && notBlocked(request.resource.data.get('fp', 'none'))
         && ownsNickname(request.resource.data.nk, request.resource.data.cid)
@@ -211,7 +253,7 @@ service cloud.firestore {
         && request.resource.data.owner.size() <= 12
         && cleanName(request.resource.data.owner)
         && request.resource.data.ownerNk is string
-        && request.resource.data.ownerCid is string
+        && realClientId(request.resource.data.ownerCid)
         && notBlocked(request.resource.data.ownerCid)
         && ownsNickname(request.resource.data.ownerNk, request.resource.data.ownerCid)
         && request.resource.data.period is string
