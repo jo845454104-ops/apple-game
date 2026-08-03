@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=43";
-import { findTargeted } from "./profanity.js?v=43";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=45";
+import { findTargeted } from "./profanity.js?v=45";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,18 +11,16 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=43";
-import { nicknameKey } from "./profanity.js?v=43";
+} from "./roulette.js?v=45";
+import { nicknameKey } from "./profanity.js?v=45";
 import {
   activeEvent,
-  nextEvent,
   upcomingEvent,
-  NOTICE_LEAD_MIN,
   claimEvent,
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=43";
+} from "./event.js?v=45";
 import {
   getNickname,
   setNickname,
@@ -41,7 +39,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=43";
+} from "./chat.js?v=45";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1027,6 +1025,7 @@ const eventTimerEl = document.getElementById("event-timer");
 
 let liveEvent = null;
 
+
 function fmtClock(ms) {
   const s = Math.max(0, Math.floor(ms / 1000));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -1045,27 +1044,14 @@ function renderEventBanner() {
     return;
   }
 
-  // 시작 30분 전부터는 눈에 띄게 예고하고 남은 시간을 센다
+  // 돌발 이벤트라서 30분 전이 되어야 배너가 뜬다.
+  // 시작 시각은 알려주지 않고 "곧 시작"이라고만 한다.
   const soon = upcomingEvent(now);
   if (soon) {
     eventBannerEl.hidden = false;
     eventBannerEl.className = "event-banner event-banner--notice";
-    eventTitleEl.textContent = `⏰ 잠시 후 돌발 이벤트! 목표 ${soon.target}점 · 상품 ${EVENT_PRIZE}`;
-    eventDescEl.textContent = `${soon.startAt.toLocaleTimeString("ko-KR", {
-      hour: "2-digit", minute: "2-digit",
-    })} 시작 · 30분 동안 진행됩니다`;
-    eventTimerEl.textContent = fmtClock(soon.startAt - now);
-    return;
-  }
-
-  const upcoming = nextEvent(now);
-  if (upcoming) {
-    eventBannerEl.hidden = false;
-    eventBannerEl.className = "event-banner event-banner--soon";
-    eventTitleEl.textContent = "⏰ 오늘 돌발 이벤트가 예정되어 있습니다";
-    eventDescEl.textContent = `${upcoming.startAt.toLocaleTimeString("ko-KR", {
-      hour: "2-digit", minute: "2-digit",
-    })}에 시작 · ${NOTICE_LEAD_MIN}분 전에 다시 알려드립니다`;
+    eventTitleEl.textContent = `⏰ 곧 돌발 이벤트가 시작됩니다! 목표 ${soon.target}점 · 상품 ${EVENT_PRIZE}`;
+    eventDescEl.textContent = "30분 안에 시작됩니다 · 시작되면 30분 동안 진행돼요";
     eventTimerEl.textContent = "";
     return;
   }

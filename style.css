@@ -1854,3 +1854,60 @@ body {
   background: var(--accent);
   color: #fff;
 }
+
+/* ── 돌발 이벤트 30분 전 팝업 ──────────────── */
+.event-popup {
+  z-index: 940;
+}
+
+.event-popup__card {
+  text-align: center;
+  max-width: 340px;
+  border: 2px solid #f59e0b;
+}
+
+.event-popup__icon {
+  font-size: 44px;
+  margin-bottom: 6px;
+}
+
+.event-popup__title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #f59e0b;
+  margin-bottom: 8px;
+}
+
+.event-popup__desc {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--slate-600);
+  margin-bottom: 14px;
+}
+
+.event-popup__target {
+  background: var(--accent-soft);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.event-popup__target-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--slate-400);
+}
+
+.event-popup__target-value {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.event-popup__prize {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
