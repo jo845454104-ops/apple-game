@@ -1828,3 +1828,29 @@ body {
 #blocked-list li.is-expired .block-state {
   color: var(--slate-400);
 }
+
+/* 시작 30분 전 예고 */
+.event-banner--notice {
+  background: linear-gradient(100deg, #f59e0b, #f97316);
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.35);
+  animation: none;
+}
+
+.replay-btn {
+  appearance: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 3px 7px;
+  font-size: 12px;
+  line-height: 1;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+}
+
+.replay-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}

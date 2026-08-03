@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=40";
-import { getClientId } from "./chat.js?v=40";
-import { getFingerprint } from "./fingerprint.js?v=40";
+import { getFirestoreApi } from "./firebase-app.js?v=42";
+import { getClientId } from "./chat.js?v=42";
+import { getFingerprint } from "./fingerprint.js?v=42";
 
 // 돌발 이벤트
 // 서버(예약 작업)를 쓰지 않고도 모든 참가자가 같은 이벤트를 보게 하려면
@@ -11,9 +11,13 @@ export const EVENT_PRIZE = "커피";
 export const EVENT_DURATION_MIN = 30;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
-// 시작 가능 구간: 한국시간 14:00 ~ 16:30 (끝나는 시각이 17:00을 넘지 않도록)
-const WINDOW_START_MIN = 14 * 60;
-const WINDOW_END_MIN = 16 * 60 + 30;
+// 매시 50분~정각은 쉬는 시간이라 이벤트를 걸치지 않게 한다.
+// 30분짜리 이벤트가 쉬는 시간 전에 끝나려면 정각~20분 사이에 시작해야 한다.
+const EVENT_HOURS = [14, 15, 16];
+const START_MINUTE_MAX = 20;
+
+// 시작 30분 전부터 예고 배너를 띄운다
+export const NOTICE_LEAD_MIN = 30;
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -45,23 +49,22 @@ export function todayEvents(now = new Date()) {
   const count = rand() < 0.5 ? 1 : 2;
   const dateStr = `${y}${pad(m)}${pad(d)}`;
 
-  const list = [];
-  for (let i = 0; i < count; i += 1) {
-    const startMin = Math.floor(
-      WINDOW_START_MIN + rand() * (WINDOW_END_MIN - WINDOW_START_MIN)
-    );
-    const target = 107 + Math.floor(rand() * 6); // 107~112
-    list.push({ id: `${dateStr}-${i + 1}`, startMin, target });
+  // 서로 다른 시간대를 골라 두 이벤트가 겹치지 않게 한다
+  const hours = [...EVENT_HOURS];
+  for (let i = hours.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    [hours[i], hours[j]] = [hours[j], hours[i]];
   }
 
-  // 두 개가 겹치면 뒤엣것을 밀어 서로 떨어뜨린다
-  list.sort((a, b) => a.startMin - b.startMin);
-  for (let i = 1; i < list.length; i += 1) {
-    const minStart = list[i - 1].startMin + EVENT_DURATION_MIN;
-    if (list[i].startMin < minStart) {
-      list[i].startMin = Math.min(minStart, WINDOW_END_MIN);
-    }
+  const list = [];
+  for (let i = 0; i < count; i += 1) {
+    const hour = hours[i];
+    const minute = Math.floor(rand() * (START_MINUTE_MAX + 1)); // 0~20분
+    const target = 107 + Math.floor(rand() * 6); // 107~112
+    list.push({ id: `${dateStr}-${i + 1}`, startMin: hour * 60 + minute, target });
   }
+
+  list.sort((a, b) => a.startMin - b.startMin);
 
   // 한국시간 분 단위를 실제 시각으로 바꾼다
   return list.map((e) => {
@@ -82,6 +85,13 @@ export function activeEvent(now = new Date()) {
 // 다음에 열릴 이벤트
 export function nextEvent(now = new Date()) {
   return todayEvents(now).find((e) => now < e.startAt) ?? null;
+}
+
+// 곧 시작하는 이벤트 (기본 30분 전부터)
+export function upcomingEvent(now = new Date(), leadMin = NOTICE_LEAD_MIN) {
+  const e = nextEvent(now);
+  if (!e) return null;
+  return e.startAt - now <= leadMin * 60000 ? e : null;
 }
 
 export async function claimEvent(name, nickKey, eventId, score) {

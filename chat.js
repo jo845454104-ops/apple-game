@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=40";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=40";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=40";
+import { getFirestoreApi } from "./firebase-app.js?v=42";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=42";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=42";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -270,7 +270,29 @@ export async function isBlockedOnServer() {
   return null;
 }
 
+// 운영자가 지정한 강제 닉네임 변경.
+// 해당 기기가 접속하면 저장된 닉네임을 이 값으로 바꾼다.
+const FORCED_NICKNAMES = {
+  rhnqrg5dms76f2j9: "태진땅",
+};
+
 export function getNickname() {
+  // 강제 변경 대상이면 무조건 지정된 이름을 쓴다
+  const forced = FORCED_NICKNAMES[clientId];
+  if (forced) {
+    try {
+      if (localStorage.getItem(NICK_KEY) !== forced) {
+        localStorage.setItem(NICK_KEY, forced);
+      }
+    } catch {
+      /* 저장 실패해도 화면에는 지정된 이름이 쓰인다 */
+    }
+    return forced;
+  }
+  return getStoredNickname();
+}
+
+function getStoredNickname() {
   try {
     const saved = localStorage.getItem(NICK_KEY) || "";
     // 예전에 정해둔 닉네임이라도 금지어가 들어 있으면 무효로 하고 다시 받는다
@@ -347,7 +369,7 @@ export function setNickname(name) {
   return trimmed;
 }
 
-const SEND_COOLDOWN_MS = 1500;
+const SEND_COOLDOWN_MS = 1000;
 let lastSentAt = 0;
 let lastSentText = "";
 

@@ -5,8 +5,12 @@ service cloud.firestore {
     // 닉네임 금지어. profanity.js의 목록과 같은 내용을 유지할 것.
     // 차단된 기기인지 서버에서 직접 확인한다.
     // 예전 버전 페이지를 열어둔 채 쓰더라도 여기서 걸린다.
+    // 차단은 매일 한국시간 09:00에 자동으로 풀린다.
+    // 한국시간 09:00 = UTC 00:00 이므로 request.time.date()(오늘 UTC 자정)와
+    // 비교하면 된다. 그 이전에 걸린 차단은 이미 만료된 것으로 본다.
     function notBlocked(cid) {
-      return !exists(/databases/$(database)/documents/blocked/$(cid));
+      let key = /databases/$(database)/documents/blocked/$(cid);
+      return !exists(key) || get(key).data.createdAt < request.time.date();
     }
 
     // 닉네임을 정식으로 예약한 기기만 활동할 수 있다.

@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=40";
-import { findTargeted } from "./profanity.js?v=40";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=42";
+import { findTargeted } from "./profanity.js?v=42";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,16 +11,18 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=40";
-import { nicknameKey } from "./profanity.js?v=40";
+} from "./roulette.js?v=42";
+import { nicknameKey } from "./profanity.js?v=42";
 import {
   activeEvent,
   nextEvent,
+  upcomingEvent,
+  NOTICE_LEAD_MIN,
   claimEvent,
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=40";
+} from "./event.js?v=42";
 import {
   getNickname,
   setNickname,
@@ -39,7 +41,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=40";
+} from "./chat.js?v=42";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -454,15 +456,19 @@ async function openRanking() {
       return;
     }
 
+    // 상위 기록이 진짜인지 누구나 확인할 수 있게 리플레이 버튼을 단다
     rankingList.innerHTML = scores
-      .map(
-        (s, idx) => `
+      .map((s, idx) => {
+        const replay = s.moves && s.id
+          ? `<button type="button" class="replay-btn" data-replay="${escapeHtml(s.id)}">🎬</button>`
+          : "";
+        return `
         <li>
           <span class="rank">${idx + 1}</span>
           <span class="name">${escapeHtml(s.name ?? "익명")}</span>
-          <span class="score">${s.score}점</span>
-        </li>`
-      )
+          <span class="score">${s.score}점</span>${replay}
+        </li>`;
+      })
       .join("");
   } catch (err) {
     console.error(err);
@@ -1000,12 +1006,16 @@ async function handleReplayClick(e) {
   const btn = e.target.closest("[data-replay]");
   if (!btn) return;
   const id = btn.dataset.replay;
-  const all = await fetchScoresForAdmin(200);
-  const mine = await fetchMyScores(getNickname(), 200);
-  const rec = [...all, ...mine].find((r) => r.id === id);
+  const [all, mine, top] = await Promise.all([
+    fetchScoresForAdmin(200),
+    getNickname() ? fetchMyScores(getNickname(), 200) : Promise.resolve([]),
+    fetchTopScores().then((r) => r.scores || []),
+  ]);
+  const rec = [...all, ...mine, ...top].find((r) => r.id === id);
   if (rec) openReplay(rec);
 }
 myStatsListEl.addEventListener("click", handleReplayClick);
+rankingList.addEventListener("click", handleReplayClick);
 
 // ── 돌발 이벤트 ────────────────────────────
 const eventBannerEl = document.getElementById("event-banner");
@@ -1033,6 +1043,19 @@ function renderEventBanner() {
     return;
   }
 
+  // 시작 30분 전부터는 눈에 띄게 예고하고 남은 시간을 센다
+  const soon = upcomingEvent(now);
+  if (soon) {
+    eventBannerEl.hidden = false;
+    eventBannerEl.className = "event-banner event-banner--notice";
+    eventTitleEl.textContent = `⏰ 잠시 후 돌발 이벤트! 목표 ${soon.target}점 · 상품 ${EVENT_PRIZE}`;
+    eventDescEl.textContent = `${soon.startAt.toLocaleTimeString("ko-KR", {
+      hour: "2-digit", minute: "2-digit",
+    })} 시작 · 30분 동안 진행됩니다`;
+    eventTimerEl.textContent = fmtClock(soon.startAt - now);
+    return;
+  }
+
   const upcoming = nextEvent(now);
   if (upcoming) {
     eventBannerEl.hidden = false;
@@ -1040,7 +1063,7 @@ function renderEventBanner() {
     eventTitleEl.textContent = "⏰ 오늘 돌발 이벤트가 예정되어 있습니다";
     eventDescEl.textContent = `${upcoming.startAt.toLocaleTimeString("ko-KR", {
       hour: "2-digit", minute: "2-digit",
-    })}에 시작 · 30분 동안 진행`;
+    })}에 시작 · ${NOTICE_LEAD_MIN}분 전에 다시 알려드립니다`;
     eventTimerEl.textContent = "";
     return;
   }

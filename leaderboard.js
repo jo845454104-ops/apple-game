@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=40";
-import { getClientId } from "./chat.js?v=40";
-import { getFingerprint } from "./fingerprint.js?v=40";
+import { getFirestoreApi } from "./firebase-app.js?v=42";
+import { getClientId } from "./chat.js?v=42";
+import { getFingerprint } from "./fingerprint.js?v=42";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
@@ -167,7 +167,7 @@ export async function fetchTopScores() {
     );
     const snap = await api.getDocs(q);
     const scores = snap.docs
-      .map((d) => d.data())
+      .map((d) => ({ id: d.id, ...d.data() }))
       .sort((a, b) => b.score - a.score)
       .slice(0, TOP_N);
     return { online: true, scores };
