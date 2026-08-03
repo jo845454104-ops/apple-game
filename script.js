@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=46";
-import { findTargeted } from "./profanity.js?v=46";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=47";
+import { findTargeted } from "./profanity.js?v=47";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,10 +11,20 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=46";
-import { nicknameKey } from "./profanity.js?v=46";
+} from "./roulette.js?v=47";
+import { nicknameKey } from "./profanity.js?v=47";
+import {
+  TICKET_KINDS,
+  issueTicket,
+  myTickets,
+  verifyTicket,
+  useTicket,
+  transferTicket,
+  prettySerial,
+} from "./shop.js?v=47";
 import {
   makeRoomCode,
+  setGuestStakes,
   myStakes,
   createRoom,
   joinRoom,
@@ -22,7 +32,7 @@ import {
   watchRoom,
   openRooms,
   duelWinner,
-} from "./duel.js?v=46";
+} from "./duel.js?v=47";
 import {
   activeEvent,
   upcomingEvent,
@@ -30,7 +40,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=46";
+} from "./event.js?v=47";
 import {
   getNickname,
   setNickname,
@@ -49,7 +59,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=46";
+} from "./chat.js?v=47";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1037,6 +1047,132 @@ async function handleReplayClick(e) {
 myStatsListEl.addEventListener("click", handleReplayClick);
 rankingList.addEventListener("click", handleReplayClick);
 
+// ── 상점 ───────────────────────────────────
+const shopBtn = document.getElementById("shop-btn");
+const shopModal = document.getElementById("shop-modal");
+const shopCloseBtn = document.getElementById("shop-close");
+const shopGridEl = document.getElementById("shop-grid");
+const shopStatusEl = document.getElementById("shop-status");
+const ticketListEl = document.getElementById("ticket-list");
+const verifyInput = document.getElementById("verify-input");
+const verifyBtn = document.getElementById("verify-btn");
+const verifyResultEl = document.getElementById("verify-result");
+
+function renderShopCards() {
+  shopGridEl.innerHTML = Object.entries(TICKET_KINDS)
+    .map(
+      ([kind, info]) => `<div class="shop-card">
+        <span class="shop-card__emoji">${info.emoji}</span>
+        <span class="shop-card__name">${info.label}</span>
+        <span class="shop-card__note">${info.note}</span>
+        <button type="button" data-issue="${kind}">발급</button>
+      </div>`
+    )
+    .join("");
+}
+
+async function renderMyTickets() {
+  const nick = getNickname();
+  if (!nick) {
+    ticketListEl.innerHTML = '<li class="ranking-empty">닉네임을 먼저 정하세요.</li>';
+    return;
+  }
+  ticketListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
+  const list = await myTickets(nicknameKey(nick));
+  if (list.length === 0) {
+    ticketListEl.innerHTML = '<li class="ranking-empty">아직 발급받은 교환권이 없습니다.</li>';
+    return;
+  }
+  ticketListEl.innerHTML = list
+    .map((t) => {
+      const p = prettySerial(t.serial);
+      const used = t.state === "used";
+      return `<li class="${used ? "ticket-used" : ""}">
+        <span class="rank">${TICKET_KINDS[t.kind]?.emoji ?? "🎟️"}</span>
+        <span class="name">${escapeHtml(p.title)}
+          <span class="ticket-serial">${p.code}</span>
+        </span>
+        ${used ? '<span class="block-state">사용됨</span>'
+               : `<button type="button" class="block-btn" data-use="${escapeHtml(t.serial)}">사용</button>`}
+      </li>`;
+    })
+    .join("");
+}
+
+shopBtn.addEventListener("click", () => {
+  shopModal.hidden = false;
+  shopStatusEl.textContent = "";
+  verifyResultEl.hidden = true;
+  renderShopCards();
+  renderMyTickets();
+});
+shopCloseBtn.addEventListener("click", () => { shopModal.hidden = true; });
+shopModal.addEventListener("click", (e) => {
+  if (e.target === shopModal) shopModal.hidden = true;
+});
+
+shopGridEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-issue]");
+  if (!btn) return;
+  const nick = getNickname();
+  if (!nick) { shopStatusEl.textContent = "닉네임을 먼저 정하세요."; return; }
+  btn.disabled = true;
+  shopStatusEl.textContent = "발급 중...";
+  try {
+    const serial = await issueTicket({ kind: btn.dataset.issue, name: nick, nickKey: nicknameKey(nick) });
+    const p = prettySerial(serial);
+    shopStatusEl.textContent = `${p.title} 발급 완료 · 일련번호 ${p.code}`;
+    renderMyTickets();
+  } catch (err) {
+    shopStatusEl.textContent = err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+ticketListEl.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-use]");
+  if (!btn) return;
+  if (!window.confirm("이 교환권을 사용 처리할까요? 되돌릴 수 없습니다.")) return;
+  btn.disabled = true;
+  try {
+    await useTicket(btn.dataset.use);
+    shopStatusEl.textContent = "사용 처리했습니다.";
+    renderMyTickets();
+  } catch (err) {
+    shopStatusEl.textContent = err.message;
+    btn.disabled = false;
+  }
+});
+
+async function doVerify() {
+  const v = verifyInput.value.trim();
+  if (!v) return;
+  verifyResultEl.hidden = false;
+  verifyResultEl.className = "verify-result";
+  verifyResultEl.textContent = "확인 중...";
+  const r = await verifyTicket(v);
+  if (!r.found) {
+    verifyResultEl.className = "verify-result is-bad";
+    verifyResultEl.innerHTML = `<div class="verify-result__title">❌ 확인 불가</div>${escapeHtml(r.reason)}`;
+    return;
+  }
+  const issued = r.createdAt?.seconds
+    ? new Date(r.createdAt.seconds * 1000).toLocaleString("ko-KR")
+    : "-";
+  verifyResultEl.className = `verify-result ${r.valid ? "is-ok" : "is-bad"}`;
+  verifyResultEl.innerHTML = `
+    <div class="verify-result__title">${r.valid ? "✅ 유효한 교환권" : "⚠️ 이미 사용됨"}</div>
+    <b>${escapeHtml(r.title)}</b><br />
+    일련번호: ${r.code}<br />
+    현재 소유자: ${escapeHtml(r.owner || "-")}<br />
+    최초 발급: ${escapeHtml(r.issuedTo || "-")} · ${issued}
+    ${r.wonFrom ? `<br />대결로 획득 (이전 소유: ${escapeHtml(r.wonFrom)})` : ""}`;
+}
+
+verifyBtn.addEventListener("click", doVerify);
+verifyInput.addEventListener("keydown", (e) => { if (e.key === "Enter") doVerify(); });
+
 // ── 대결 ───────────────────────────────────
 const duelBtn = document.getElementById("duel-btn");
 const duelModal = document.getElementById("duel-modal");
@@ -1072,15 +1208,24 @@ function showDuelLobby() {
 
 async function fillStakeOptions() {
   const nick = getNickname();
-  duelStakeSel.innerHTML = '<option value="없음">걸지 않음</option>';
+  duelStakeSel.innerHTML = "";
   if (!nick) return;
-  const list = await myStakes(nicknameKey(nick));
-  list.forEach((p) => {
+  const list = (await myTickets(nicknameKey(nick))).filter((t) => t.state === "active");
+  if (list.length === 0) {
+    duelStakeSel.innerHTML = '<option disabled>걸 수 있는 교환권이 없습니다</option>';
+    return;
+  }
+  list.forEach((t) => {
+    const p = prettySerial(t.serial);
     const opt = document.createElement("option");
-    opt.value = p.prize;
-    opt.textContent = `${p.prize} (${p.from})`;
+    opt.value = t.serial;
+    opt.textContent = `${p.title} · ${p.code}`;
     duelStakeSel.appendChild(opt);
   });
+}
+
+function selectedStakes() {
+  return [...duelStakeSel.selectedOptions].map((o) => o.value).filter(Boolean);
 }
 
 async function renderOpenRooms() {
@@ -1103,6 +1248,97 @@ async function renderOpenRooms() {
     .join("");
 }
 
+const tradeHostList = document.getElementById("trade-host-list");
+const tradeGuestList = document.getElementById("trade-guest-list");
+const tradeHostLabel = document.getElementById("trade-host-label");
+const tradeGuestLabel = document.getElementById("trade-guest-label");
+const tradeAddRow = document.getElementById("trade-add-row");
+const tradeAddSel = document.getElementById("trade-add-sel");
+const tradeAddBtn = document.getElementById("trade-add-btn");
+
+function stakeItems(list) {
+  if (!list || list.length === 0) {
+    return '<li class="empty">올린 것 없음</li>';
+  }
+  return list
+    .map((serial) => {
+      const p = prettySerial(serial);
+      return `<li>${escapeHtml(p.title)}<br /><span class="ticket-serial">${p.code}</span></li>`;
+    })
+    .join("");
+}
+
+// 양쪽이 무엇을 걸었는지 서로 보이게 한다
+function renderTrade(room) {
+  tradeHostLabel.textContent = `${room.host || "방장"}이 건 것`;
+  tradeGuestLabel.textContent = `${room.guest || "도전자"}가 건 것`;
+  tradeHostList.innerHTML = stakeItems(room.hostStakes);
+  tradeGuestList.innerHTML = stakeItems(room.guestStakes);
+
+  // 도전자는 대결 전까지 자기 판돈을 올릴 수 있다
+  const canAdd = !duelIsHost && room.guest && !duelWinner(room)
+    && typeof room.guestScore !== "number";
+  tradeAddRow.hidden = !canAdd;
+  if (canAdd) fillTradeAddOptions(room.guestStakes || []);
+}
+
+async function fillTradeAddOptions(already) {
+  const nick = getNickname();
+  if (!nick) return;
+  const list = (await myTickets(nicknameKey(nick)))
+    .filter((t) => t.state === "active" && !already.includes(t.serial));
+  tradeAddSel.innerHTML = list.length
+    ? list.map((t) => {
+        const p = prettySerial(t.serial);
+        return `<option value="${escapeHtml(t.serial)}">${escapeHtml(p.title)} · ${p.code}</option>`;
+      }).join("")
+    : '<option disabled>올릴 교환권이 없습니다</option>';
+}
+
+tradeAddBtn.addEventListener("click", async () => {
+  if (!duelRoom || !tradeAddSel.value) return;
+  const next = [...(duelRoom.guestStakes || []), tradeAddSel.value];
+  try {
+    await setGuestStakes(duelRoom.code, next);
+  } catch (err) {
+    duelRoomMsgEl.textContent = "판돈을 올리지 못했습니다.";
+  }
+});
+
+// 대결이 끝나면 진 쪽의 교환권을 이긴 쪽으로 넘긴다
+let settledRoom = null;
+async function settleDuel(room) {
+  const winner = duelWinner(room);
+  if (!winner || winner === "draw") return;
+  if (settledRoom === room.code) return;
+
+  // 이긴 쪽이 처리한다 (양쪽이 동시에 하지 않도록)
+  const iWon = (winner === "host") === duelIsHost;
+  if (!iWon) return;
+  settledRoom = room.code;
+
+  const loot = winner === "host" ? room.guestStakes : room.hostStakes;
+  if (!loot || loot.length === 0) return;
+  const nick = getNickname();
+  const fromNk = winner === "host" ? room.guestNk : room.hostNk;
+  for (const serial of loot) {
+    try {
+      await transferTicket(serial, nick, nicknameKey(nick), getClientIdSafe(), fromNk);
+    } catch (err) {
+      console.error("교환권 이전 실패", serial, err);
+    }
+  }
+  duelRoomMsgEl.textContent += ` · 교환권 ${loot.length}장을 획득했습니다!`;
+}
+
+function getClientIdSafe() {
+  try {
+    return localStorage.getItem("apple-game-client-id") || "";
+  } catch {
+    return "";
+  }
+}
+
 function renderDuelRoom(room) {
   if (!room) {
     duelStatusEl.textContent = "방이 사라졌습니다.";
@@ -1118,8 +1354,7 @@ function renderDuelRoom(room) {
   duelGuestNameEl.textContent = room.guest || "기다리는 중…";
   duelHostScoreEl.textContent = room.hostScore ?? "-";
   duelGuestScoreEl.textContent = room.guestScore ?? "-";
-  duelRoomStakeEl.textContent =
-    room.stake && room.stake !== "없음" ? `🎁 걸린 당첨권: ${room.stake}` : "";
+  renderTrade(room);
 
   const winner = duelWinner(room);
   document.getElementById("duel-side-host").classList.toggle("is-winner", winner === "host");
@@ -1133,6 +1368,7 @@ function renderDuelRoom(room) {
         : (winner === "host" ? room.host : room.guest) + " 님 승리!";
     duelRoomMsgEl.textContent = `🏁 ${label}`;
     duelStartBtn.hidden = true;
+    settleDuel(room);
   } else if (!room.guest) {
     duelRoomMsgEl.textContent = "상대를 기다리고 있습니다";
     duelStartBtn.hidden = true;
@@ -1175,13 +1411,13 @@ duelCreateBtn.addEventListener("click", async () => {
   try {
     const code = makeRoomCode();
     const seed = Math.floor(Math.random() * 2147483647);
+    const stakes = selectedStakes();
     await createRoom({
-      code, name: nick, nickKey: nicknameKey(nick), seed,
-      stake: duelStakeSel.value,
+      code, name: nick, nickKey: nicknameKey(nick), seed, stakes,
       password: duelPwInput.value.trim(),
     });
     duelPwInput.value = "";
-    await enterRoom({ code, host: nick, hostCid: "", seed, stake: duelStakeSel.value, state: "waiting" }, true);
+    await enterRoom({ code, host: nick, seed, hostStakes: stakes, state: "waiting" }, true);
   } catch (err) {
     duelStatusEl.textContent = err.message;
   } finally {

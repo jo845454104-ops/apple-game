@@ -1,7 +1,7 @@
-import { getFirestoreApi } from "./firebase-app.js?v=46";
-import { getClientId } from "./chat.js?v=46";
-import { fetchMyPrizes } from "./roulette.js?v=46";
-import { fetchMyEventPrizes } from "./event.js?v=46";
+import { getFirestoreApi } from "./firebase-app.js?v=47";
+import { getClientId } from "./chat.js?v=47";
+import { fetchMyPrizes } from "./roulette.js?v=47";
+import { fetchMyEventPrizes } from "./event.js?v=47";
 
 // 멀티플레이 대결
 // 방을 만들면 시드가 정해지고, 두 사람이 같은 배치로 겨룬다.
@@ -43,7 +43,7 @@ export async function myStakes(nickKey) {
   return all.filter((p) => p.prize && p.prize !== "꽝");
 }
 
-export async function createRoom({ code, name, nickKey, seed, stake, password }) {
+export async function createRoom({ code, name, nickKey, seed, stakes, password }) {
   const ctx = await getFirestoreApi();
   if (!ctx) throw new Error("서버에 연결되어 있지 않습니다.");
   const { db, api } = ctx;
@@ -57,12 +57,21 @@ export async function createRoom({ code, name, nickKey, seed, stake, password })
     hostNk: nickKey,
     hostCid: getClientId(),
     seed,
-    stake: String(stake || "없음").slice(0, 20),
+    stake: (stakes || []).length ? `${stakes.length}장` : "없음",
+    hostStakes: stakes || [],
     pw: password ? await hashPw(password) : "",
     state: "waiting",
     createdAt: api.serverTimestamp(),
   });
   return code;
+}
+
+// 도전자가 올린 판돈을 갱신한다 (거래창처럼 여러 장)
+export async function setGuestStakes(code, stakes) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) throw new Error("서버에 연결되어 있지 않습니다.");
+  const { db, api } = ctx;
+  await api.updateDoc(api.doc(db, "duels", code), { guestStakes: stakes });
 }
 
 export async function joinRoom({ code, name, nickKey, password }) {
@@ -89,6 +98,7 @@ export async function joinRoom({ code, name, nickKey, password }) {
     guest: name.slice(0, 12),
     guestNk: nickKey,
     guestCid: getClientId(),
+    guestStakes: [],
     state: "playing",
     startedAt: api.serverTimestamp(),
   });

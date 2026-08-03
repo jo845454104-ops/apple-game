@@ -2050,3 +2050,132 @@ body {
   margin-bottom: 14px;
   min-height: 20px;
 }
+
+/* ── 상점 ─────────────────────────────────── */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.shop-card {
+  background: var(--bg);
+  border: 1px solid var(--slate-200);
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.shop-card__emoji { font-size: 26px; display: block; }
+.shop-card__name { display: block; font-size: 12px; font-weight: 700; margin-top: 2px; }
+.shop-card__note { display: block; font-size: 10px; color: var(--slate-400); margin-bottom: 8px; }
+
+.shop-card button {
+  width: 100%;
+  appearance: none;
+  cursor: pointer;
+  padding: 7px 4px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: 9px;
+}
+
+.shop-card button:disabled { background: var(--slate-400); cursor: default; }
+
+.ticket-serial {
+  display: block;
+  font-size: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--slate-400);
+  user-select: all;
+}
+
+.ticket-used { opacity: 0.45; }
+
+.verify-result {
+  margin-top: 8px;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid var(--slate-200);
+  background: var(--bg);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.verify-result[hidden] { display: none; }
+.verify-result.is-ok { border-color: #16a34a; }
+.verify-result.is-bad { border-color: var(--apple-red); }
+
+.verify-result__title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+.verify-result.is-ok .verify-result__title { color: #16a34a; }
+.verify-result.is-bad .verify-result__title { color: var(--apple-red); }
+
+/* ── 거래창 ───────────────────────────────── */
+.trade-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.trade-col {
+  background: var(--bg);
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  padding: 8px;
+  min-height: 84px;
+}
+
+.trade-col__label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--slate-400);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.trade-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trade-list li {
+  background: var(--surface);
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  padding: 5px 7px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.trade-list .empty {
+  background: none;
+  border: none;
+  color: var(--slate-400);
+  text-align: center;
+  font-weight: 400;
+}
+
+#trade-add-sel {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--slate-200);
+  background: var(--surface);
+  color: var(--slate-900);
+  font-family: inherit;
+  font-size: 12px;
+}
+
+#duel-stake {
+  min-height: 90px;
+}
