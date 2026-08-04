@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=63";
-import { findTargeted } from "./profanity.js?v=63";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=64";
+import { findTargeted } from "./profanity.js?v=64";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -12,8 +12,8 @@ import {
   fetchMyPrizes,
   PRIZES,
   fetchTodayPrizes,
-} from "./roulette.js?v=63";
-import { nicknameKey } from "./profanity.js?v=63";
+} from "./roulette.js?v=64";
+import { nicknameKey } from "./profanity.js?v=64";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -22,7 +22,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=63";
+} from "./shop.js?v=64";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -36,7 +36,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=63";
+} from "./duel.js?v=64";
 import {
   activeEvent,
   upcomingEvent,
@@ -44,7 +44,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=63";
+} from "./event.js?v=64";
 import {
   getNickname,
   setNickname,
@@ -63,7 +63,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=63";
+} from "./chat.js?v=64";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1778,6 +1778,14 @@ const myPrizeNoteEl = document.getElementById("myprize-note");
 
 const EMOJI = Object.fromEntries(PRIZES.map((p) => [p.label, p.emoji]));
 
+// 받은 날짜. 며칠 전 것도 그대로 남아 있다는 것을 보여준다.
+function prizeWhen(ts) {
+  const ms = ts?.toMillis ? ts.toMillis() : ts?.seconds ? ts.seconds * 1000 : 0;
+  if (!ms) return "";
+  const d = new Date(ms);
+  return ` · ${d.getMonth() + 1}/${d.getDate()}`;
+}
+
 async function renderMyPrizes() {
   const nick = getNickname();
   if (!nick) {
@@ -1800,7 +1808,11 @@ async function renderMyPrizes() {
     ...evList.map((r) => ({ ...r, n: "돌발", isEvent: true })),
     ...list.filter((r) => r.prize && r.prize !== "꽝"),
   ];
-  myPrizeNoteEl.textContent = `${nick} · 오늘 ${todayList.length}/${DAILY_SPINS}회 사용 · ${reset}에 초기화`;
+  // "초기화"되는 것은 룰렛을 돌릴 수 있는 횟수뿐이다.
+  // 받은 당첨권은 계속 남는다는 것을 문구에서 분명히 한다.
+  myPrizeNoteEl.textContent =
+    `${nick} · 오늘 룰렛 ${todayList.length}/${DAILY_SPINS}회 사용 ` +
+    `(${reset}에 횟수만 초기화) · 받은 당첨권은 계속 보관됩니다`;
 
   if (won.length === 0) {
     myPrizeListEl.innerHTML =
@@ -1814,7 +1826,7 @@ async function renderMyPrizes() {
         <span class="name">${EMOJI[r.prize] || "🎁"} ${escapeHtml(r.prize)}
           <span class="online-list__code">${r.score}점 달성 · ${
             r.isEvent ? "🔥 돌발 이벤트" : `${r.n}번째 룰렛`
-          }</span>
+          }${prizeWhen(r.createdAt)}</span>
         </span>
       </li>`
     )

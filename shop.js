@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=63";
-import { getClientId } from "./chat.js?v=63";
+import { getFirestoreApi } from "./firebase-app.js?v=64";
+import { getClientId } from "./chat.js?v=64";
 
 // 개인이 자기 이름으로 발급하는 증정권
 // 일련번호가 곧 문서 ID다. "닉네임__종류__회차" 형태로 고정해서
@@ -73,16 +73,23 @@ export async function issueTicket({ kind, name, nickKey }) {
   return serial;
 }
 
+// 내 증정권. 전체를 받아와 걸러내면 사람이 늘수록 한도(300건)에 먼저 걸려
+// 자기 것이 안 보이게 된다. 서버에서 내 것만 골라 받는다.
 export async function myTickets(nickKey) {
   const ctx = await getFirestoreApi();
   if (!ctx) return [];
   const { db, api } = ctx;
-  const snap = await api.getDocs(
-    api.query(api.collection(db, "tickets"), api.limit(300))
-  );
-  return snap.docs
-    .map((d) => ({ serial: d.id, ...d.data() }))
-    .filter((t) => t.ownerNk === nickKey);
+  const snap = await api
+    .getDocs(
+      api.query(
+        api.collection(db, "tickets"),
+        api.where("ownerNk", "==", nickKey),
+        api.limit(200)
+      )
+    )
+    .catch(() => null);
+  if (!snap) return [];
+  return snap.docs.map((d) => ({ serial: d.id, ...d.data() }));
 }
 
 // 전산 확인: 일련번호로 진위와 상태를 조회한다
