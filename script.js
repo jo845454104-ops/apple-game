@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=60";
-import { findTargeted } from "./profanity.js?v=60";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=61";
+import { findTargeted } from "./profanity.js?v=61";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,8 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=60";
-import { nicknameKey } from "./profanity.js?v=60";
+} from "./roulette.js?v=61";
+import { nicknameKey } from "./profanity.js?v=61";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +21,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=60";
+} from "./shop.js?v=61";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -35,7 +35,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=60";
+} from "./duel.js?v=61";
 import {
   activeEvent,
   upcomingEvent,
@@ -43,7 +43,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=60";
+} from "./event.js?v=61";
 import {
   getNickname,
   setNickname,
@@ -62,7 +62,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=60";
+} from "./chat.js?v=61";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -473,7 +473,7 @@ async function openRanking() {
   try {
     const { online, scores } = await fetchTopScores();
     const next = getNextReset();
-    const resetNote = `매주 월요일 오전 8시 초기화 · 다음 초기화 ${next.toLocaleString("ko-KR", {
+    const resetNote = `평일 오전 9시 초기화 · 다음 초기화 ${next.toLocaleString("ko-KR", {
       month: "numeric",
       day: "numeric",
       hour: "2-digit",

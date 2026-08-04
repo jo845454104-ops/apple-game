@@ -1,20 +1,22 @@
-import { getFirestoreApi } from "./firebase-app.js?v=60";
-import { getClientId } from "./chat.js?v=60";
-import { getFingerprint } from "./fingerprint.js?v=60";
+import { getFirestoreApi } from "./firebase-app.js?v=61";
+import { getClientId } from "./chat.js?v=61";
+import { getFingerprint } from "./fingerprint.js?v=61";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
 const TOP_N = 10;
 
-// 랭킹은 매주 월요일 한국시간 08:00에 한 번만 초기화된다.
+// 랭킹은 평일(월~금) 한국시간 09:00마다 초기화된다.
 // 기록을 실제로 지우는 대신 "직전 초기화 이후 기록만 보여주는" 방식이라 예약 작업이 필요 없다.
-const RESET_HOUR_KST = 8;
+// 주말에는 초기화하지 않으므로 금요일 09:00 기준이 월요일 09:00까지 이어진다.
+const RESET_HOUR_KST = 9;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// 0=일, 1=월 ... 6=토 → 월요일만 초기화
+// 0=일, 1=월 ... 6=토 → 평일(월~금)마다 초기화
 function isResetDay(kstDate) {
-  return kstDate.getUTCDay() === 1;
+  const dow = kstDate.getUTCDay();
+  return dow >= 1 && dow <= 5;
 }
 
 function kstResetMoment(kstDate) {
@@ -29,7 +31,7 @@ function kstResetMoment(kstDate) {
 }
 
 export function getResetCutoff(now = Date.now()) {
-  // 오늘부터 거슬러 올라가며 이미 지나간 월~목 18시 중 가장 최근을 찾는다
+  // 오늘부터 거슬러 올라가며 이미 지나간 평일 09시 중 가장 최근을 찾는다
   for (let back = 0; back < 14; back += 1) {
     const kst = new Date(now + KST_OFFSET_MS - back * DAY_MS);
     if (!isResetDay(kst)) continue;

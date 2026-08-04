@@ -1,4 +1,4 @@
-import { claimPass, savedPass } from "./pass.js?v=60";
+import { claimPass, savedPass } from "./pass.js?v=61";
 
 // 입장 화면. 코드가 맞으면 게임 페이지로 넘긴다.
 // 화면을 건너뛰고 game.html 을 직접 열 수는 있지만, 그쪽에서도 코드를 확인하고
@@ -9,7 +9,7 @@ const btn = document.getElementById("pass-btn");
 const statusEl = document.getElementById("pass-status");
 
 function go() {
-  location.replace("game.html?v=60");
+  location.replace("game.html?v=61");
 }
 
 async function tryEnter(code, quiet) {
