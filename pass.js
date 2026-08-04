@@ -1,4 +1,4 @@
-import { getFirestoreApi } from "./firebase-app.js?v=59";
+import { getFirestoreApi } from "./firebase-app.js?v=60";
 
 // 입장 코드
 // 운영자가 CLI로 발급한 코드를 가진 사람만 게임에 들어온다.
@@ -35,12 +35,42 @@ export function forgetPass() {
   }
 }
 
+// 기기 ID는 chat.js 가 만들지만 입장 화면에서는 chat.js 를 띄우지 않는다.
+// 그래서 여기서도 같은 방식으로 찾고, 없으면 같은 규칙으로 만들어 둔다.
+// localStorage 만 보면 그것만 지워진 브라우저에서 빈 값이 나와
+// 자리를 잡지 못한 채 들어가게 된다.
 function myCid() {
-  try {
-    return localStorage.getItem(CID_KEY) || "";
-  } catch {
-    return "";
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      const v = store.getItem(CID_KEY);
+      if (v) return v;
+    } catch {
+      /* 막힌 저장소는 건너뛴다 */
+    }
   }
+  try {
+    const m = document.cookie.match(/(?:^|;\s*)agid=([^;]+)/);
+    if (m) return decodeURIComponent(m[1]);
+  } catch {
+    /* 쿠키를 못 읽어도 아래에서 새로 만든다 */
+  }
+
+  // chat.js 와 같은 형태로 만들어야 서버 규칙의 형식 검사를 통과한다
+  const fresh =
+    Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      store.setItem(CID_KEY, fresh);
+    } catch {
+      /* 하나 실패해도 나머지에 남는다 */
+    }
+  }
+  try {
+    document.cookie = `agid=${encodeURIComponent(fresh)};path=/;max-age=31536000;SameSite=Lax`;
+  } catch {
+    /* 쿠키 저장 실패는 무시한다 */
+  }
+  return fresh;
 }
 
 // 코드를 점유한다.
@@ -64,7 +94,13 @@ export async function claimPass(code) {
   const seen = data.lastSeen?.toMillis ? data.lastSeen.toMillis() : 0;
   const busy = data.holder && data.holder !== cid && Date.now() - seen < IDLE_MS;
   if (busy) {
-    return { ok: false, reason: "이미 다른 기기에서 쓰고 있는 코드입니다." };
+    const left = Math.max(1, Math.ceil((IDLE_MS - (Date.now() - seen)) / 1000));
+    return {
+      ok: false,
+      reason:
+        `이 코드를 지금 다른 기기에서 쓰고 있습니다.\n` +
+        `그 기기에서 창을 닫으면 약 ${left}초 뒤에 풀립니다.`,
+    };
   }
 
   try {
@@ -73,9 +109,13 @@ export async function claimPass(code) {
       holderNk: getNick(),
       lastSeen: api.serverTimestamp(),
     });
-  } catch {
-    // 규칙이 거부했다는 것은 그 사이에 남이 가져갔다는 뜻이다
-    return { ok: false, reason: "이미 다른 기기에서 쓰고 있는 코드입니다." };
+  } catch (err) {
+    // 점유 여부는 위에서 이미 걸렀으므로 여기까지 왔다면 다른 이유다.
+    // 둘을 같은 문구로 묶으면 원인을 못 찾으니 구분해서 알린다.
+    return {
+      ok: false,
+      reason: "서버가 입장을 거부했습니다. 새로고침 후 다시 시도해 주세요.",
+    };
   }
 
   savePass(clean);

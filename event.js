@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=59";
-import { getClientId } from "./chat.js?v=59";
-import { getFingerprint } from "./fingerprint.js?v=59";
+import { getFirestoreApi } from "./firebase-app.js?v=60";
+import { getClientId } from "./chat.js?v=60";
+import { getFingerprint } from "./fingerprint.js?v=60";
 
 // 돌발 이벤트
 // 서버(예약 작업)를 쓰지 않고도 모든 참가자가 같은 이벤트를 보게 하려면
@@ -16,6 +16,9 @@ const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const EVENT_HOURS = [14, 15, 16];
 const START_MINUTE_MAX = 20;
 
+// 평일 하루가 "이벤트 있는 날"이 될 확률
+export const EVENT_DAY_CHANCE = 0.25;
+
 // 시작 30분 전부터 예고 배너를 띄운다
 export const NOTICE_LEAD_MIN = 30;
 
@@ -28,6 +31,19 @@ function mulberry32(seed) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+// 날짜를 그대로 씨앗으로 쓰면 하루 차이가 잘 섞이지 않아
+// 이벤트가 한 달에 몰리거나 한 달 내내 없기도 한다(실제로 그랬다).
+// 씨앗을 먼저 흩어 놓으면 같은 25%라도 훨씬 고르게 퍼진다.
+function mixSeed(n) {
+  let h = n >>> 0;
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x7feb352d);
+  h ^= h >>> 15;
+  h = Math.imul(h, 0x846ca68b);
+  h ^= h >>> 16;
+  return h >>> 0;
 }
 
 function pad(n) {
@@ -45,7 +61,12 @@ export function todayEvents(now = new Date()) {
   // 평일에만 연다
   if (dow === 0 || dow === 6) return [];
 
-  const rand = mulberry32(y * 10000 + m * 100 + d);
+  const rand = mulberry32(mixSeed(y * 10000 + m * 100 + d));
+
+  // 그날 이벤트가 열릴지부터 정한다. 평일 넷 중 하루꼴(25%)이라
+  // 대부분의 날은 아무 일도 없다. 그래야 "돌발"이 된다.
+  if (rand() >= EVENT_DAY_CHANCE) return [];
+
   const count = rand() < 0.5 ? 1 : 2;
   const dateStr = `${y}${pad(m)}${pad(d)}`;
 

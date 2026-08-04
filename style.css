@@ -2630,6 +2630,8 @@ body {
   min-height: 20px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.6;
+  white-space: pre-line;
   color: var(--slate-400);
 }
 
