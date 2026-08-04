@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=61";
-import { findTargeted } from "./profanity.js?v=61";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=63";
+import { findTargeted } from "./profanity.js?v=63";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -11,8 +11,9 @@ import {
   nextResetAt,
   fetchMyPrizes,
   PRIZES,
-} from "./roulette.js?v=61";
-import { nicknameKey } from "./profanity.js?v=61";
+  fetchTodayPrizes,
+} from "./roulette.js?v=63";
+import { nicknameKey } from "./profanity.js?v=63";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -21,7 +22,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=61";
+} from "./shop.js?v=63";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -35,7 +36,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=61";
+} from "./duel.js?v=63";
 import {
   activeEvent,
   upcomingEvent,
@@ -43,7 +44,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=61";
+} from "./event.js?v=63";
 import {
   getNickname,
   setNickname,
@@ -62,7 +63,7 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=61";
+} from "./chat.js?v=63";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -1785,9 +1786,12 @@ async function renderMyPrizes() {
     return;
   }
   myPrizeListEl.innerHTML = '<li class="ranking-empty">불러오는 중...</li>';
-  const [list, evList] = await Promise.all([
+  // 당첨권 목록은 회차와 무관하게 전부 보여주고,
+  // "오늘 몇 회 썼는지"만 오늘 회차로 따로 센다.
+  const [list, evList, todayList] = await Promise.all([
     fetchMyPrizes(nicknameKey(nick)),
     fetchMyEventPrizes(nicknameKey(nick)),
+    fetchTodayPrizes(nicknameKey(nick)),
   ]);
   const reset = nextResetAt().toLocaleString("ko-KR", {
     month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
@@ -1796,7 +1800,7 @@ async function renderMyPrizes() {
     ...evList.map((r) => ({ ...r, n: "돌발", isEvent: true })),
     ...list.filter((r) => r.prize && r.prize !== "꽝"),
   ];
-  myPrizeNoteEl.textContent = `${nick} · 오늘 ${list.length}/${DAILY_SPINS}회 사용 · ${reset}에 초기화`;
+  myPrizeNoteEl.textContent = `${nick} · 오늘 ${todayList.length}/${DAILY_SPINS}회 사용 · ${reset}에 초기화`;
 
   if (won.length === 0) {
     myPrizeListEl.innerHTML =

@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=61";
-import { getClientId } from "./chat.js?v=61";
-import { getFingerprint } from "./fingerprint.js?v=61";
+import { getFirestoreApi } from "./firebase-app.js?v=63";
+import { getClientId } from "./chat.js?v=63";
+import { getFingerprint } from "./fingerprint.js?v=63";
 
 export const ROULETTE_MIN_SCORE = 100;
 export const DAILY_SPINS = 3;
@@ -112,8 +112,30 @@ export async function recordPrize(name, nickKey, prize, score) {
   return { ok: false, reason: "오늘 룰렛 기회를 모두 사용했습니다." };
 }
 
-// 내 닉네임으로 이번 회차에 받은 당첨권을 가져온다.
+// 내가 받은 당첨권 전부. 회차와 상관없이 모은다.
+// 예전에는 이번 회차만 봤는데, 룰렛 회차가 매일 18시에 바뀌는 탓에
+// 어제 받은 당첨권이 화면에서 사라진 것처럼 보였다. 기록은 그대로 있었다.
 export async function fetchMyPrizes(nickKey) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return [];
+  const { db, api } = ctx;
+  const snap = await api
+    .getDocs(
+      api.query(
+        api.collection(db, "rewards"),
+        api.where("nk", "==", nickKey),
+        api.limit(200)
+      )
+    )
+    .catch(() => null);
+  if (!snap) return [];
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
+}
+
+// 오늘 회차에 받은 것만 (남은 횟수 표시용)
+export async function fetchTodayPrizes(nickKey) {
   const ctx = await getFirestoreApi();
   if (!ctx) return [];
   const { db, api } = ctx;

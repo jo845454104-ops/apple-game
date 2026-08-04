@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=61";
-import { getClientId } from "./chat.js?v=61";
-import { getFingerprint } from "./fingerprint.js?v=61";
+import { getFirestoreApi } from "./firebase-app.js?v=63";
+import { getClientId } from "./chat.js?v=63";
+import { getFingerprint } from "./fingerprint.js?v=63";
 
 // 돌발 이벤트
 // 서버(예약 작업)를 쓰지 않고도 모든 참가자가 같은 이벤트를 보게 하려면
@@ -149,18 +149,24 @@ export async function claimEvent(name, nickKey, eventId, score) {
   }
 }
 
+// 이벤트로 받은 상품 전부. 오늘 이벤트만 보면 어제 받은 것이 사라져 보인다.
 export async function fetchMyEventPrizes(nickKey) {
   const ctx = await getFirestoreApi();
   if (!ctx) return [];
   const { db, api } = ctx;
-  const out = [];
-  for (const e of todayEvents()) {
-    const snap = await api
-      .getDoc(api.doc(db, "events", `${nickKey}__${e.id}`))
-      .catch(() => null);
-    if (snap?.exists()) out.push({ ...snap.data(), target: e.target });
-  }
-  return out;
+  const snap = await api
+    .getDocs(
+      api.query(
+        api.collection(db, "events"),
+        api.where("nk", "==", nickKey),
+        api.limit(200)
+      )
+    )
+    .catch(() => null);
+  if (!snap) return [];
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0));
 }
 
 export async function watchEventWinners(onList, limit = 20) {
