@@ -1,4 +1,4 @@
-import { claimPass, savedPass } from "./pass.js?v=67";
+import { claimPass, savedPass, startGuest } from "./pass.js?v=68";
 
 // 입장 화면. 코드가 맞으면 게임 페이지로 넘긴다.
 // 화면을 건너뛰고 game.html 을 직접 열 수는 있지만, 그쪽에서도 코드를 확인하고
@@ -7,9 +7,10 @@ import { claimPass, savedPass } from "./pass.js?v=67";
 const input = document.getElementById("pass-input");
 const btn = document.getElementById("pass-btn");
 const statusEl = document.getElementById("pass-status");
+const guestBtn = document.getElementById("guest-btn");
 
 function go() {
-  location.replace("game.html?v=67");
+  location.replace("game.html?v=68");
 }
 
 function sanitize(value) {
@@ -54,6 +55,10 @@ async function tryEnter(code, quiet) {
 btn.addEventListener("click", () => tryEnter(input.value, false));
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") tryEnter(input.value, false);
+});
+guestBtn?.addEventListener("click", () => {
+  startGuest();
+  go();
 });
 
 // 한글 입력(IME) 조합 중에 값을 덮어쓰면 조합이 끊겨 한 글자도 못 친다.

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>🍎 무한 사과게임 (베타)</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="style.css?v=68" />
+</head>
+<body class="infinite-body">
+  <div class="wrap infinite-wrap">
+    <header class="topbar infinite-topbar">
+      <a class="ghost-btn infinite-back" href="game.html?v=68">← 사과게임으로</a>
+      <h1 class="title infinite-title">🍎 무한 사과게임 <span class="beta-badge">BETA</span></h1>
+      <button type="button" class="ghost-btn" id="inf-ranking-btn">🏆 무한 랭킹</button>
+    </header>
+
+    <p class="infinite-desc">
+      터뜨린 칸에는 잠시 뒤 새 사과가 다시 생겨나 <strong>끝없이</strong> 이어집니다.
+      막대가 다 닳기 전에 계속 터뜨려서 <strong>콤보</strong>를 쌓으세요. 콤보가 쌓일수록 점수 배율이 오릅니다.
+      <span class="gold-hint">✨ 황금 사과</span>를 같이 터뜨리면 보너스 점수를 받습니다.
+    </p>
+
+    <div class="hud infinite-hud">
+      <div class="hud__box">
+        <span class="hud__label">점수</span>
+        <span class="hud__value" id="inf-score">0</span>
+      </div>
+      <div class="hud__box">
+        <span class="hud__label">콤보</span>
+        <span class="hud__value" id="inf-combo">0</span>
+      </div>
+      <div class="hud__box">
+        <span class="hud__label">배율</span>
+        <span class="hud__value" id="inf-mult">×1.0</span>
+      </div>
+    </div>
+
+    <div class="stage infinite-stage">
+      <div class="board-frame infinite-board-frame">
+        <div class="board-inner infinite-board-inner">
+          <div class="apple-grid infinite-grid" id="inf-grid"></div>
+          <div class="selection-box" id="inf-selection-box" hidden></div>
+          <div class="sum-badge" id="inf-sum-badge" hidden></div>
+
+          <div class="overlay" id="inf-start-overlay">
+            <div class="overlay__card infinite-card">
+              <p class="overlay__title">무한 사과게임 <span class="beta-badge">BETA</span></p>
+              <p class="overlay__desc">
+                합이 10이 되는 사과를 드래그로 묶어 터뜨리세요.<br />
+                제한 시간 안에 계속 터뜨리지 않으면 게임이 끝납니다.<br />
+                판은 절대 비지 않습니다 — 터진 자리엔 곧 새 사과가 돋아납니다.
+              </p>
+              <button type="button" class="play-btn" id="inf-start-btn">시작</button>
+            </div>
+          </div>
+
+          <div class="overlay" id="inf-end-overlay" hidden>
+            <div class="overlay__card infinite-card">
+              <p class="overlay__title">게임 종료!</p>
+              <p class="overlay__result">점수 <span id="inf-final-score">0</span>점 · 최고 콤보 <span id="inf-final-combo">0</span></p>
+
+              <div class="name-row" id="inf-nick-row">
+                <span class="fixed-nick" id="inf-nickname"></span>
+                <button type="button" class="play-btn small" id="inf-submit-btn">랭킹 등록</button>
+              </div>
+
+              <p class="submit-status" id="inf-submit-status"></p>
+              <button type="button" class="play-btn" id="inf-retry-btn">다시하기</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-timer infinite-side-timer">
+          <span class="side-timer__score" id="inf-side-score">0</span>
+          <div class="side-timer__track">
+            <div class="side-timer__fill" id="inf-timer-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="inf-ranking-modal" hidden>
+    <div class="modal__card infinite-card">
+      <div class="modal__header">
+        <h2>🏆 무한모드 랭킹 <span class="beta-badge">BETA</span></h2>
+        <button type="button" class="modal__close" id="inf-ranking-close">×</button>
+      </div>
+      <ol class="ranking-list" id="inf-ranking-list"></ol>
+    </div>
+  </div>
+
+  <script type="module" src="infinite.js?v=68"></script>
+</body>
+</html>

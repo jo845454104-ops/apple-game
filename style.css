@@ -2224,6 +2224,8 @@ body {
   box-shadow: var(--shadow-sm);
   transition: border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
   white-space: nowrap;
+  text-decoration: none;
+  display: inline-block;
 }
 
 .corner-btn:hover {
@@ -2647,6 +2649,23 @@ body {
   color: var(--slate-400);
 }
 
+.gate__guest {
+  appearance: none;
+  border: none;
+  background: none;
+  margin-top: 12px;
+  padding: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--slate-400);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.gate__guest:hover {
+  color: var(--accent);
+}
+
 /* ── 리플레이 창 ──────────────────────────
    랭킹·기록실·관리자 창에서 열리므로 그것들보다 위에 떠야 한다.
    기본 모달과 z-index 가 같으면 뒤에 깔려 가려진다.
@@ -2677,5 +2696,209 @@ body {
   #replay-modal .replay-board {
     gap: 2px;
     padding: 6px;
+  }
+}
+
+/* ============ 무한 사과게임 (베타) — 뿌요뿌요/테트리스 느낌의 다크 테마 ============ */
+
+.beta-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #0d1526;
+  background: linear-gradient(135deg, #fde047, #facc15);
+  border-radius: 999px;
+  padding: 2px 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+}
+
+body.infinite-body {
+  background: radial-gradient(circle at 50% -10%, #241a45 0%, #0a0a17 55%, #050509 100%);
+  min-height: 100vh;
+  color: #e5e7ff;
+}
+
+.infinite-wrap {
+  max-width: 720px;
+  padding: 22px 16px 40px;
+}
+
+.infinite-topbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.infinite-back {
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  font-size: 13px;
+  padding: 9px 14px;
+}
+
+.infinite-back:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.infinite-title {
+  font-size: 20px;
+  color: #f4f2ff;
+  text-shadow: 0 0 18px rgba(167, 139, 250, 0.6);
+}
+
+#inf-ranking-btn {
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.45);
+}
+
+.infinite-desc {
+  max-width: 560px;
+  text-align: center;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #b9b6e8;
+  margin: 4px 0 6px;
+}
+
+.infinite-desc strong {
+  color: #f0abfc;
+}
+
+.gold-hint {
+  color: #fde047;
+  font-weight: 700;
+}
+
+.infinite-hud .hud__box {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.15);
+}
+
+.infinite-hud .hud__label {
+  color: #a5a0d8;
+}
+
+.infinite-hud .hud__value {
+  color: #f4f2ff;
+  text-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+}
+
+.infinite-stage {
+  margin-top: 4px;
+}
+
+.infinite-board-frame {
+  background: rgba(20, 16, 40, 0.75);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  box-shadow: 0 0 40px rgba(88, 28, 135, 0.35), var(--shadow-lg);
+  flex: 0 1 560px;
+  max-width: 560px;
+}
+
+.infinite-board-inner {
+  background-color: #0c0a1c;
+  background-image: linear-gradient(rgba(167, 139, 250, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(167, 139, 250, 0.12) 1px, transparent 1px);
+  border-color: rgba(167, 139, 250, 0.25);
+}
+
+.infinite-grid {
+  grid-template-columns: repeat(10, 1fr);
+  gap: 8px;
+}
+
+.infinite-grid .apple {
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.35));
+}
+
+.infinite-grid .apple.is-cleared {
+  opacity: 0;
+  transform: scale(0.2);
+}
+
+.infinite-grid .apple.is-golden {
+  filter: drop-shadow(0 0 12px rgba(250, 204, 21, 0.85)) saturate(1.4) hue-rotate(-25deg);
+}
+
+.infinite-grid .apple.is-golden::after {
+  content: "✨";
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  font-size: 12px;
+}
+
+.infinite-side-timer .side-timer__track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.infinite-side-timer .side-timer__fill {
+  background: linear-gradient(180deg, #c4b5fd 0%, #7c3aed 100%);
+  /* 매 프레임 JS로 직접 갱신하므로 CSS 트랜지션과 부딪히지 않게 끈다 */
+  transition: background 0.3s ease;
+}
+
+.infinite-side-timer .side-timer__fill.is-low {
+  background: linear-gradient(180deg, #fca5a5 0%, #dc2626 100%);
+}
+
+.infinite-side-timer .side-timer__score {
+  color: #f0abfc;
+  text-shadow: 0 0 10px rgba(240, 171, 252, 0.6);
+}
+
+.infinite-card {
+  background: #161129;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  color: #e5e7ff;
+}
+
+.infinite-card .overlay__title,
+.infinite-card h2 {
+  color: #f4f2ff;
+}
+
+.infinite-card .overlay__desc,
+.infinite-card .overlay__result {
+  color: #b9b6e8;
+}
+
+#inf-ranking-modal .ranking-list li {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(167, 139, 250, 0.25);
+}
+
+#inf-ranking-modal .ranking-list li .name {
+  color: #f4f2ff;
+}
+
+#inf-ranking-modal .ranking-list li .score {
+  color: #fbbf24;
+}
+
+#inf-ranking-modal .ranking-list li .combo-note {
+  font-size: 11px;
+  color: #a5a0d8;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .infinite-board-frame {
+    flex-direction: column-reverse;
+  }
+  .infinite-side-timer {
+    flex-direction: row;
+    width: 100%;
+    padding-top: 0;
+  }
+  .infinite-side-timer .side-timer__track {
+    height: 10px;
+    width: 100%;
   }
 }

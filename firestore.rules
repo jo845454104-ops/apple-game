@@ -80,6 +80,38 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
+
+    // 무한모드(베타) 전용 랭킹. 일반 랭킹과 점수 체계(콤보 배율)가 달라 분리한다.
+    // 아직 리플레이 검증이 없어 상한을 넉넉히 잡아 명백한 조작만 거른다.
+    match /infiniteScores/{doc} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+          ['name', 'score', 'combo', 'clears', 'durationMs', 'cid', 'fp', 'createdAt']
+        )
+        && notBlocked(request.resource.data.get('fp', 'none'))
+        && realClientId(request.resource.data.cid)
+        && notBlocked(request.resource.data.cid)
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 12
+        && cleanName(request.resource.data.name)
+        && request.resource.data.score is number
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 8000
+        && request.resource.data.combo is number
+        && request.resource.data.combo >= 0
+        && request.resource.data.combo <= 300
+        && request.resource.data.clears is number
+        && request.resource.data.clears >= 0
+        // 한 판당 최대치를 넉넉히 잡아 명백한 조작만 거른다
+        && request.resource.data.score <= (request.resource.data.clears + 1) * 20
+        && request.resource.data.durationMs is number
+        && request.resource.data.durationMs >= 0
+        && request.resource.data.durationMs <= 1800000
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
     match /messages/{doc} {
       allow read: if true;
       allow create: if request.resource.data.name is string

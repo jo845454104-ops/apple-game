@@ -1,4 +1,4 @@
-import { getFirestoreApi } from "./firebase-app.js?v=67";
+import { getFirestoreApi } from "./firebase-app.js?v=68";
 
 // 입장 코드
 // 운영자가 CLI로 발급한 코드를 가진 사람만 게임에 들어온다.
@@ -6,6 +6,25 @@ import { getFirestoreApi } from "./firebase-app.js?v=67";
 
 const PASS_KEY = "apple-game-pass";
 const CID_KEY = "apple-game-client-id";
+const GUEST_KEY = "apple-game-guest";
+
+// 코드 없이 들어온 사람. 자리 점유·해제 대상이 아니라서 beat()/releasePass()를
+// 건너뛴다 — 애초에 아무 코드도 차지하고 있지 않다.
+export function isGuest() {
+  try {
+    return localStorage.getItem(GUEST_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function startGuest() {
+  try {
+    localStorage.setItem(GUEST_KEY, "1");
+  } catch {
+    /* 저장 못 해도 이번 세션은 게스트로 진행된다 */
+  }
+}
 
 // 이 시간 동안 신호가 없으면 자리를 비운 것으로 보고 다른 기기가 이어받는다.
 export const IDLE_MS = 90 * 1000;
