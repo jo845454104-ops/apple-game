@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=77";
-import { getClientId } from "./chat.js?v=77";
-import { getFingerprint } from "./fingerprint.js?v=77";
+import { getFirestoreApi } from "./firebase-app.js?v=78";
+import { getClientId } from "./chat.js?v=78";
+import { getFingerprint } from "./fingerprint.js?v=78";
 
 // 돌발 이벤트
 // 서버(예약 작업)를 쓰지 않고도 모든 참가자가 같은 이벤트를 보게 하려면
