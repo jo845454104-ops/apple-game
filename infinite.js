@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=71";
-import { getFingerprint } from "./fingerprint.js?v=71";
+import { getFirestoreApi } from "./firebase-app.js?v=72";
+import { getFingerprint } from "./fingerprint.js?v=72";
 import {
   getNickname,
   reserveNickname,
@@ -8,7 +8,7 @@ import {
   sendMessage,
   watchMessages,
   fetchChatLocked,
-} from "./chat.js?v=71";
+} from "./chat.js?v=72";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -17,14 +17,15 @@ import {
 // 가끔 황금 사과가 섞여 나와 추가 점수를 준다.
 // 점수 체계가 원래 게임과 달라 랭킹은 infiniteScores 컬렉션에 따로 쌓는다.
 
-const COLS = 8;
-const ROWS = 12;
+const COLS = 11;
+const ROWS = 15;
 const TARGET_SUM = 10;
 // 100점대 플레이어의 평균 판단 시간 기준. 넉넉하게 주지 않고 이 시간이
 // 지나면 바로 실패한다 — 계속 손이 빨라야 하는 긴장감이 핵심이다.
 const POP_MS = 5000;
 const FIRST_POP_MS = 8000; // 시작 직후 첫 판만 판을 한 번 훑어볼 시간을 조금 더 준다
 const RESPAWN_MS = 1500; // 터진 칸에 새 사과가 돋아나기까지
+const SPROUT_WARN_MS = 700; // 돋아나기 이만큼 전부터 자리를 예고한다
 const GOLDEN_CHANCE = 0.06;
 const GOLDEN_BONUS = 15;
 const MAX_MULTIPLIER = 10;
@@ -89,7 +90,7 @@ function fillCell(cell) {
   cell.golden = Math.random() < GOLDEN_CHANCE;
   cell.empty = false;
   cell.num.textContent = cell.value;
-  cell.el.classList.remove("is-cleared");
+  cell.el.classList.remove("is-cleared", "is-sprouting");
   cell.el.classList.toggle("is-golden", cell.golden);
 }
 
@@ -176,9 +177,20 @@ function multiplierFor(comboCount) {
 function popCell(cell) {
   cell.empty = true;
   cell.el.classList.add("is-cleared");
+
+  // 다시 돋아나기 직전에 자리를 예고해준다. 갑자기 튀어나오면
+  // 이미 훑어본 칸이 조용히 바뀌어 있어 판을 다시 읽어야 한다.
+  const warnId = setTimeout(() => {
+    respawnTimers.delete(warnId);
+    if (!playing) return;
+    cell.el.classList.add("is-sprouting");
+  }, RESPAWN_MS - SPROUT_WARN_MS);
+  respawnTimers.add(warnId);
+
   const id = setTimeout(() => {
     respawnTimers.delete(id);
     if (!playing) return;
+    cell.el.classList.remove("is-sprouting");
     fillCell(cell);
     measureRects();
   }, RESPAWN_MS);

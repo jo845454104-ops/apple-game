@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=71";
-import { getClientId } from "./chat.js?v=71";
-import { getFingerprint } from "./fingerprint.js?v=71";
+import { getFirestoreApi } from "./firebase-app.js?v=72";
+import { getClientId } from "./chat.js?v=72";
+import { getFingerprint } from "./fingerprint.js?v=72";
 
 export const ROULETTE_MIN_SCORE = 100;
 export const DAILY_SPINS = 3;

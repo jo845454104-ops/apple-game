@@ -3,7 +3,7 @@ import {
   isFirebaseConfigured,
   recaptchaSiteKey,
   isAppCheckConfigured,
-} from "./firebase-config.js?v=71";
+} from "./firebase-config.js?v=72";
 
 const SDK_VERSION = "10.13.2";
 
