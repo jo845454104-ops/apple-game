@@ -1,4 +1,4 @@
-import { savedPass, beat, releasePass, forgetPass, isGuest, BEAT_MS } from "./pass.js?v=70";
+import { savedPass, beat, releasePass, forgetPass, isGuest, BEAT_MS } from "./pass.js?v=71";
 
 // 게임 페이지 문지기.
 // 코드가 없거나 남이 그 코드를 가져갔으면 입장 화면으로 돌려보낸다.
@@ -12,7 +12,7 @@ function toGate(message) {
   } catch {
     /* 무시 */
   }
-  location.replace("index.html?v=70");
+  location.replace("index.html?v=71");
 }
 
 if (!isGuest() && !savedPass()) {
