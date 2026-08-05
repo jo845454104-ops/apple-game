@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=79";
-import { findTargeted } from "./profanity.js?v=79";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=80";
+import { findTargeted } from "./profanity.js?v=80";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -12,8 +12,8 @@ import {
   fetchMyPrizes,
   PRIZES,
   fetchTodayPrizes,
-} from "./roulette.js?v=79";
-import { nicknameKey } from "./profanity.js?v=79";
+} from "./roulette.js?v=80";
+import { nicknameKey } from "./profanity.js?v=80";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -22,7 +22,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=79";
+} from "./shop.js?v=80";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -36,7 +36,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=79";
+} from "./duel.js?v=80";
 import {
   activeEvent,
   upcomingEvent,
@@ -44,7 +44,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=79";
+} from "./event.js?v=80";
 import {
   getNickname,
   setNickname,
@@ -63,7 +63,10 @@ import {
   blockTargets,
   reserveNickname,
   clearNickname,
-} from "./chat.js?v=79";
+  changeNickname,
+  nextNicknameChangeAt,
+  NICK_CHANGE_DAYS,
+} from "./chat.js?v=80";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -2129,6 +2132,7 @@ const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const chatSendBtn = document.getElementById("chat-send");
 const chatStatusEl = document.getElementById("chat-status");
+const nickChangeBtn = document.getElementById("nick-change-btn");
 
 function formatChatTime(createdAt) {
   if (!createdAt?.seconds) return "";
@@ -2143,6 +2147,7 @@ function renderNickname() {
   nickLabelEl.textContent = hasNick ? nick : "닉네임 미설정";
   nickLabelEl.parentElement.classList.toggle("is-set", hasNick);
   nickSetupEl.hidden = hasNick;
+  if (nickChangeBtn) nickChangeBtn.hidden = !hasNick;
   renderScoreNameArea();
   chatInput.disabled = !hasNick;
   chatSendBtn.disabled = !hasNick;
@@ -2207,6 +2212,41 @@ async function saveNicknameFromInput() {
 nickSaveBtn.addEventListener("click", saveNicknameFromInput);
 nickInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") saveNicknameFromInput();
+});
+
+// 닉네임은 일주일에 한 번만 바꿀 수 있다. 간격은 서버 규칙이 강제한다.
+nickChangeBtn?.addEventListener("click", async () => {
+  const nextAt = await nextNicknameChangeAt();
+  if (nextAt && nextAt.getTime() > Date.now()) {
+    const days = Math.ceil((nextAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+    chatStatusEl.textContent = `닉네임은 ${NICK_CHANGE_DAYS}일에 한 번만 바꿀 수 있습니다. (${days}일 남음)`;
+    return;
+  }
+
+  const value = window.prompt(
+    `새 닉네임을 입력하세요 (최대 12자).\n닉네임은 ${NICK_CHANGE_DAYS}일에 한 번만 바꿀 수 있습니다.`,
+    getNickname()
+  );
+  if (value === null) return;
+
+  // 사칭·조롱 닉네임은 시도한 것만으로 이 기기를 차단한다
+  const targetedTry = findTargeted(value);
+  if (targetedTry) {
+    lockOut(`금지된 닉네임 시도 (${targetedTry})`);
+    return;
+  }
+
+  nickChangeBtn.disabled = true;
+  chatStatusEl.textContent = "변경 중...";
+  const res = await changeNickname(value);
+  nickChangeBtn.disabled = false;
+
+  if (!res.ok) {
+    chatStatusEl.textContent = res.reason;
+    return;
+  }
+  chatStatusEl.textContent = "닉네임을 변경했습니다.";
+  renderNickname();
 });
 
 chatForm.addEventListener("submit", async (e) => {

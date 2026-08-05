@@ -159,6 +159,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 닉네임 변경 기록. 기기당 문서 하나로, 7일에 한 번만 쓸 수 있다.
+    // 클라이언트 화면을 우회해도 여기서 막히므로 간격이 실제로 강제된다.
+    match /nickChanges/{cid} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['owner', 'lastChangedAt'])
+        && request.resource.data.owner == cid
+        && realClientId(cid)
+        && request.resource.data.lastChangedAt == request.time;
+      // 직전 변경으로부터 7일이 지나야 다시 쓸 수 있다
+      allow update: if request.resource.data.keys().hasOnly(['owner', 'lastChangedAt'])
+        && request.resource.data.owner == cid
+        && realClientId(cid)
+        && request.resource.data.lastChangedAt == request.time
+        && resource.data.lastChangedAt is timestamp
+        && resource.data.lastChangedAt < request.time - duration.value(7, 'd');
+      allow delete: if false;
+    }
+
     // ── 입장 코드 ────────────────────────────
     // 운영자가 CLI로 발급한 코드를 가진 사람만 들어온다.
     // 코드 하나는 한 기기만 쓴다. 이미 쓰는 사람이 있으면 나중 사람이 거부된다.

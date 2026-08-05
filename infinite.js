@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=79";
-import { getFingerprint } from "./fingerprint.js?v=79";
+import { getFirestoreApi } from "./firebase-app.js?v=80";
+import { getFingerprint } from "./fingerprint.js?v=80";
 import {
   getNickname,
   reserveNickname,
@@ -8,7 +8,10 @@ import {
   sendMessage,
   watchMessages,
   fetchChatLocked,
-} from "./chat.js?v=79";
+  changeNickname,
+  nextNicknameChangeAt,
+  NICK_CHANGE_DAYS,
+} from "./chat.js?v=80";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -524,6 +527,7 @@ const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const chatSendBtn = document.getElementById("chat-send");
 const chatStatusEl = document.getElementById("chat-status");
+const nickChangeBtn = document.getElementById("nick-change-btn");
 
 let chatLocked = false;
 
@@ -540,6 +544,7 @@ function renderNickname() {
   nickLabelEl.textContent = hasNick ? nick : "닉네임 미설정";
   nickLabelEl.parentElement.classList.toggle("is-set", hasNick);
   nickSetupEl.hidden = hasNick;
+  if (nickChangeBtn) nickChangeBtn.hidden = !hasNick;
   chatInput.disabled = chatLocked || !hasNick;
   chatSendBtn.disabled = chatLocked || !hasNick;
   chatInput.placeholder = hasNick ? "메시지 입력" : "닉네임을 먼저 정하세요";
@@ -596,6 +601,34 @@ async function saveNicknameFromInput() {
 nickSaveBtn.addEventListener("click", saveNicknameFromInput);
 nickInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") saveNicknameFromInput();
+});
+
+// 닉네임은 일주일에 한 번만 바꿀 수 있다. 간격은 서버 규칙이 강제한다.
+nickChangeBtn?.addEventListener("click", async () => {
+  const nextAt = await nextNicknameChangeAt();
+  if (nextAt && nextAt.getTime() > Date.now()) {
+    const days = Math.ceil((nextAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+    chatStatusEl.textContent = `닉네임은 ${NICK_CHANGE_DAYS}일에 한 번만 바꿀 수 있습니다. (${days}일 남음)`;
+    return;
+  }
+
+  const value = window.prompt(
+    `새 닉네임을 입력하세요 (최대 12자).\n닉네임은 ${NICK_CHANGE_DAYS}일에 한 번만 바꿀 수 있습니다.`,
+    getNickname()
+  );
+  if (value === null) return;
+
+  nickChangeBtn.disabled = true;
+  chatStatusEl.textContent = "변경 중...";
+  const res = await changeNickname(value);
+  nickChangeBtn.disabled = false;
+
+  if (!res.ok) {
+    chatStatusEl.textContent = res.reason;
+    return;
+  }
+  chatStatusEl.textContent = "닉네임을 변경했습니다.";
+  renderNickname();
 });
 
 chatForm.addEventListener("submit", async (e) => {

@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=79";
-import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=79";
-import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=79";
+import { getFirestoreApi } from "./firebase-app.js?v=80";
+import { isClean, findProfanity, findTargeted, nicknameKey } from "./profanity.js?v=80";
+import { getFingerprint, getHardwareFingerprint } from "./fingerprint.js?v=80";
 
 const MESSAGES = "messages";
 const MESSAGE_LIMIT = 100;
@@ -367,6 +367,70 @@ export function setNickname(name) {
     /* 저장이 막혀 있어도 화면 상태로는 진행된다 */
   }
   return trimmed;
+}
+
+// ── 닉네임 주간 변경 ──────────────────────────────
+// 닉네임은 원래 한 번 정하면 못 바꾼다(자작극 방지). 다만 일주일에 한 번은
+// 바꿀 수 있게 열어두되, 간격은 서버 규칙이 강제한다.
+// 기록은 nickChanges/{기기ID} 문서 하나에 남는다.
+export const NICK_CHANGE_DAYS = 7;
+const NICK_CHANGE_MS = NICK_CHANGE_DAYS * 24 * 60 * 60 * 1000;
+
+// 다음 변경이 가능한 시각을 돌려준다. 한 번도 안 바꿨으면 null.
+export async function nextNicknameChangeAt() {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return null;
+  const { db, api } = ctx;
+  const snap = await api
+    .getDoc(api.doc(db, "nickChanges", clientId))
+    .catch(() => null);
+  if (!snap?.exists()) return null;
+  const last = snap.data().lastChangedAt;
+  if (!last?.toMillis) return null;
+  return new Date(last.toMillis() + NICK_CHANGE_MS);
+}
+
+// 닉네임을 바꾼다. 새 이름을 선점한 뒤 변경 기록을 남긴다.
+// 간격 제한은 서버 규칙이 막으므로 클라이언트를 우회해도 소용없다.
+export async function changeNickname(name) {
+  const trimmed = String(name).trim().slice(0, 12);
+  const problem = checkNickname(trimmed);
+  if (problem) return { ok: false, reason: problem };
+  if (trimmed === getNickname()) {
+    return { ok: false, reason: "지금 쓰는 닉네임과 같습니다." };
+  }
+
+  const ctx = await getFirestoreApi();
+  if (!ctx) return { ok: false, reason: "서버에 연결되어 있지 않습니다." };
+  const { db, api } = ctx;
+
+  // 먼저 남은 기간을 확인해 안내 문구를 정확히 낸다
+  const nextAt = await nextNicknameChangeAt();
+  if (nextAt && nextAt.getTime() > Date.now()) {
+    const days = Math.ceil((nextAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+    return { ok: false, reason: `닉네임은 ${NICK_CHANGE_DAYS}일에 한 번만 바꿀 수 있습니다. (${days}일 남음)` };
+  }
+
+  // 새 이름 선점. 남이 쓰고 있으면 여기서 막힌다.
+  const taken = await reserveNickname(trimmed);
+  if (!taken.ok) return taken;
+
+  // 변경 기록. 규칙이 7일 간격을 강제하므로 여기서 거부되면 아직 이른 것이다.
+  const ref = api.doc(db, "nickChanges", clientId);
+  const wrote = await api
+    .setDoc(ref, { owner: clientId, lastChangedAt: api.serverTimestamp() })
+    .then(() => true)
+    .catch(() => false);
+  if (!wrote) {
+    return { ok: false, reason: `아직 ${NICK_CHANGE_DAYS}일이 지나지 않았습니다.` };
+  }
+
+  try {
+    localStorage.setItem(NICK_KEY, trimmed);
+  } catch {
+    /* 저장이 막혀 있어도 이번 세션은 바뀐 이름으로 진행된다 */
+  }
+  return { ok: true, name: trimmed };
 }
 
 const SEND_COOLDOWN_MS = 1000;

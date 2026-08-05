@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>🍎 사과게임 - DSA 아카데미</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=79" />
+  <link rel="stylesheet" href="style.css?v=80" />
   <script>
     // 스타일이 적용되기 전에 테마를 정해 화면이 번쩍이는 것을 막는다.
     try {
@@ -26,7 +26,7 @@
       <div class="corner-bar__side corner-bar__side--right">
         <button type="button" class="corner-btn" id="shop-btn">🎫 증정권 발급</button>
         <button type="button" class="corner-btn corner-btn--accent" id="duel-btn">⚔️ 대결</button>
-        <a class="corner-btn" href="infinite.html?v=79">🍎 무한모드 <span class="beta-badge">BETA</span></a>
+        <a class="corner-btn" href="infinite.html?v=80">🍎 무한모드 <span class="beta-badge">BETA</span></a>
       </div>
     </div>
 
@@ -84,7 +84,7 @@
             <p class="overlay__result"><span id="final-score">0</span>개 터뜨렸어요</p>
 
             <div class="name-row" id="score-nick-setup" hidden>
-              <input type="text" id="player-name" maxlength="12" placeholder="닉네임을 정하세요 (변경 불가)" />
+              <input type="text" id="player-name" maxlength="12" placeholder="닉네임을 정하세요 (7일에 1회 변경)" />
               <button type="button" class="play-btn small" id="submit-score-btn">랭킹 등록</button>
             </div>
 
@@ -112,11 +112,12 @@
         <h2 class="chat-panel__title">💬 채팅</h2>
         <div class="chat-panel__nick">
           <span id="nick-label">닉네임 미설정</span>
+          <button type="button" class="link-btn" id="nick-change-btn" hidden>변경</button>
         </div>
       </div>
 
       <div class="nick-setup" id="nick-setup">
-        <p class="nick-setup__note">⚠️ 닉네임은 <strong>한 번 정하면 변경할 수 없습니다.</strong> 채팅과 랭킹에 함께 사용되니 신중히 정하세요.</p>
+        <p class="nick-setup__note">⚠️ 닉네임은 채팅과 랭킹에 함께 사용됩니다. <strong>변경은 7일에 한 번만</strong> 가능하니 신중히 정하세요.</p>
         <div class="nick-setup__row">
           <input type="text" id="nick-input" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
           <button type="button" class="play-btn small" id="nick-save-btn">확인</button>
@@ -435,7 +436,7 @@
 
   <!-- v 값은 파일을 고칠 때마다 올린다. 브라우저 캐시 때문에 HTML만 새것이고
        스크립트는 옛것인 상태가 생기지 않도록 모든 모듈에 같은 값을 붙인다. -->
-  <script type="module" src="guard.js?v=79"></script>
-  <script type="module" src="script.js?v=79"></script>
+  <script type="module" src="guard.js?v=80"></script>
+  <script type="module" src="script.js?v=80"></script>
 </body>
 </html>

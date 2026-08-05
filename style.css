@@ -3020,6 +3020,15 @@ body.infinite-body {
   letter-spacing: 0.05em;
 }
 
+/* 무한모드 채팅 패널은 밝은 카드 위라서 링크 버튼 색을 맞춰준다 */
+.infinite-stage .chat-panel .link-btn {
+  color: #6b7280;
+}
+
+.infinite-stage .chat-panel .link-btn:hover {
+  color: #ef4444;
+}
+
 .combo-pop {
   position: absolute;
   z-index: 6;
