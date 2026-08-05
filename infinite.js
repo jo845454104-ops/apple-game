@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=68";
-import { getFingerprint } from "./fingerprint.js?v=68";
+import { getFirestoreApi } from "./firebase-app.js?v=69";
+import { getFingerprint } from "./fingerprint.js?v=69";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -8,10 +8,11 @@ import { getFingerprint } from "./fingerprint.js?v=68";
 // 가끔 황금 사과가 섞여 나와 추가 점수를 준다.
 // 점수 체계가 원래 게임과 달라 랭킹은 infiniteScores 컬렉션에 따로 쌓는다.
 
-const COLS = 10;
-const ROWS = 8;
+const COLS = 8;
+const ROWS = 12;
 const TARGET_SUM = 10;
-const POP_MS = 6000; // 이 시간 안에 못 터뜨리면 게임 종료
+const POP_MS = 9000; // 이 시간 안에 못 터뜨리면 게임 종료
+const FIRST_POP_MS = 14000; // 시작 직후 첫 판정은 자리 잡을 시간을 더 준다
 const RESPAWN_MS = 1500; // 터진 칸에 새 사과가 돋아나기까지
 const GOLDEN_CHANCE = 0.06;
 const GOLDEN_BONUS = 15;
@@ -49,6 +50,7 @@ let playing = false;
 let scoreSubmitted = false;
 let startedAt = 0;
 let popDeadline = 0;
+let currentPopMs = FIRST_POP_MS;
 let tickId = null;
 let respawnTimers = new Set();
 let isSelecting = false;
@@ -191,7 +193,8 @@ function finalizeSelection() {
     comboEl.textContent = combo;
     multEl.textContent = `×${mult.toFixed(1)}`;
 
-    popDeadline = Date.now() + POP_MS;
+    currentPopMs = POP_MS;
+    popDeadline = Date.now() + currentPopMs;
   }
 
   clearSelectionVisual();
@@ -235,7 +238,7 @@ window.addEventListener("pointerup", handlePointerUp);
 function tick() {
   if (!playing) return;
   const remain = Math.max(0, popDeadline - Date.now());
-  const pct = (remain / POP_MS) * 100;
+  const pct = (remain / currentPopMs) * 100;
   timerFillEl.style.height = `${pct}%`;
   timerFillEl.classList.toggle("is-low", pct <= 30);
   if (remain <= 0) {
@@ -253,7 +256,8 @@ function startGame() {
   scoreSubmitted = false;
   playing = true;
   startedAt = Date.now();
-  popDeadline = startedAt + POP_MS;
+  currentPopMs = FIRST_POP_MS;
+  popDeadline = startedAt + currentPopMs;
 
   scoreEl.textContent = "0";
   sideScoreEl.textContent = "0";

@@ -1,4 +1,4 @@
-import { claimPass, savedPass, startGuest } from "./pass.js?v=68";
+import { claimPass, savedPass, startGuest, isGuest } from "./pass.js?v=69";
 
 // 입장 화면. 코드가 맞으면 게임 페이지로 넘긴다.
 // 화면을 건너뛰고 game.html 을 직접 열 수는 있지만, 그쪽에서도 코드를 확인하고
@@ -10,7 +10,7 @@ const statusEl = document.getElementById("pass-status");
 const guestBtn = document.getElementById("guest-btn");
 
 function go() {
-  location.replace("game.html?v=68");
+  location.replace("game.html?v=69");
 }
 
 function sanitize(value) {
@@ -39,8 +39,14 @@ async function tryEnter(code, quiet) {
   return false;
 }
 
+// 게스트로 시작한 적이 있으면 코드 확인 없이 바로 들어간다
+if (isGuest()) {
+  go();
+}
+
 // 이미 코드를 넣은 적이 있으면 자동으로 들어간다
 (async () => {
+  if (isGuest()) return;
   const code = savedPass();
   if (!code) return;
   statusEl.textContent = "저장된 코드로 들어가는 중…";
