@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=72";
-import { getFingerprint } from "./fingerprint.js?v=72";
+import { getFirestoreApi } from "./firebase-app.js?v=73";
+import { getFingerprint } from "./fingerprint.js?v=73";
 import {
   getNickname,
   reserveNickname,
@@ -8,7 +8,7 @@ import {
   sendMessage,
   watchMessages,
   fetchChatLocked,
-} from "./chat.js?v=72";
+} from "./chat.js?v=73";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -29,6 +29,10 @@ const SPROUT_WARN_MS = 700; // 돋아나기 이만큼 전부터 자리를 예고
 const GOLDEN_CHANCE = 0.06;
 const GOLDEN_BONUS = 15;
 const MAX_MULTIPLIER = 10;
+// 4개 이상을 한 번에 묶으면 초과분 1개당 이만큼 더 준다.
+// 2~3개짜리를 반복하는 것보다 크게 묶는 쪽이 이득이 되게 하는 장치다.
+const BIG_COMBO_MIN = 4;
+const BIG_COMBO_BONUS = 5;
 
 const gridEl = document.getElementById("inf-grid");
 const boardEl = gridEl.parentElement;
@@ -206,7 +210,13 @@ function finalizeSelection() {
     bestCombo = Math.max(bestCombo, combo);
     const mult = multiplierFor(combo);
     const goldenCount = selected.filter((c) => c.golden).length;
-    const gained = Math.round(selected.length * mult) + goldenCount * Math.round(GOLDEN_BONUS * mult);
+    const bigBonus =
+      selected.length >= BIG_COMBO_MIN
+        ? (selected.length - BIG_COMBO_MIN + 1) * BIG_COMBO_BONUS
+        : 0;
+    const gained = Math.round(
+      (selected.length + bigBonus + goldenCount * GOLDEN_BONUS) * mult
+    );
     score += gained;
     clearEvents += 1;
 
