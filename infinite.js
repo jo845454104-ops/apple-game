@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=75";
-import { getFingerprint } from "./fingerprint.js?v=75";
+import { getFirestoreApi } from "./firebase-app.js?v=76";
+import { getFingerprint } from "./fingerprint.js?v=76";
 import {
   getNickname,
   reserveNickname,
@@ -8,7 +8,7 @@ import {
   sendMessage,
   watchMessages,
   fetchChatLocked,
-} from "./chat.js?v=75";
+} from "./chat.js?v=76";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -20,10 +20,9 @@ import {
 const COLS = 7;
 const ROWS = 10;
 const TARGET_SUM = 10;
-// 100점대 플레이어의 평균 판단 시간 기준. 계속 손이 빨라야 하는 긴장감이
-// 핵심이지만, 5초는 판을 읽기에 너무 빠듯해 7초로 잡았다.
-const POP_MS = 7000;
-const FIRST_POP_MS = 10000; // 시작 직후 첫 판만 판을 한 번 훑어볼 시간을 조금 더 준다
+// 100점대 플레이어의 평균 판단 시간 기준. 계속 손이 빨라야 하는 긴장감이 핵심이다.
+const POP_MS = 5000;
+const FIRST_POP_MS = 8000; // 시작 직후 첫 판만 판을 한 번 훑어볼 시간을 조금 더 준다
 const RESPAWN_MS = 1500; // 터진 칸에 새 사과가 돋아나기까지
 const SPROUT_WARN_MS = 700; // 돋아나기 이만큼 전부터 자리를 예고한다
 const GOLDEN_CHANCE = 0.06;

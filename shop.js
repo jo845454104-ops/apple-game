@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=75";
-import { getClientId } from "./chat.js?v=75";
+import { getFirestoreApi } from "./firebase-app.js?v=76";
+import { getClientId } from "./chat.js?v=76";
 
 // 개인이 자기 이름으로 발급하는 증정권
 // 일련번호가 곧 문서 ID다. "닉네임__종류__회차" 형태로 고정해서
