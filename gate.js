@@ -1,4 +1,4 @@
-import { claimPass, savedPass, startGuest, isGuest } from "./pass.js?v=76";
+import { claimPass, applyNickname, savedPass, startGuest, isGuest } from "./pass.js?v=77";
 
 // 입장 화면. 코드가 맞으면 게임 페이지로 넘긴다.
 // 화면을 건너뛰고 game.html 을 직접 열 수는 있지만, 그쪽에서도 코드를 확인하고
@@ -8,9 +8,13 @@ const input = document.getElementById("pass-input");
 const btn = document.getElementById("pass-btn");
 const statusEl = document.getElementById("pass-status");
 const guestBtn = document.getElementById("guest-btn");
+const foundBox = document.getElementById("pass-found");
+const foundNickEl = document.getElementById("found-nick");
+const continueBtn = document.getElementById("continue-btn");
+const freshBtn = document.getElementById("fresh-btn");
 
 function go() {
-  location.replace("game.html?v=76");
+  location.replace("game.html?v=77");
 }
 
 function sanitize(value) {
@@ -27,6 +31,30 @@ async function tryEnter(code, quiet) {
   btn.disabled = false;
 
   if (res.ok) {
+    const alreadyHasNickname = (() => {
+      try {
+        return Boolean(localStorage.getItem("apple-game-nickname"));
+      } catch {
+        return false;
+      }
+    })();
+
+    // 이 코드에 예전 닉네임이 걸려 있고 아직 닉네임이 없으면, 바로 들어가지 않고 고르게 한다.
+    if (res.nick && !alreadyHasNickname) {
+      statusEl.textContent = "";
+      foundNickEl.textContent = res.nick;
+      foundBox.hidden = false;
+      continueBtn.onclick = async () => {
+        continueBtn.disabled = true;
+        freshBtn.disabled = true;
+        continueBtn.textContent = "불러오는 중…";
+        await applyNickname(res.nick, res.code);
+        go();
+      };
+      freshBtn.onclick = () => go();
+      return true;
+    }
+
     statusEl.textContent = "확인되었습니다. 들어갑니다…";
     statusEl.className = "gate__status is-ok";
     go();

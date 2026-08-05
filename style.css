@@ -2649,6 +2649,39 @@ body {
   color: var(--slate-400);
 }
 
+.gate__found {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--slate-200);
+  border-radius: 14px;
+}
+
+.gate__found[hidden] {
+  display: none;
+}
+
+.gate__found p {
+  font-size: 14px;
+  color: var(--slate-600);
+  margin: 0 0 12px;
+}
+
+.gate__found strong {
+  color: var(--accent);
+}
+
+.gate__found .play-btn.small {
+  flex: 1;
+}
+
+.gate__found .play-btn.ghost {
+  flex: 1;
+  color: var(--slate-600);
+  background: var(--slate-200);
+  box-shadow: none;
+}
+
 .gate__guest {
   appearance: none;
   border: none;

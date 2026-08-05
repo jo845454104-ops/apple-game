@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>🍎 무한 사과게임 (베타)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=76" />
+  <link rel="stylesheet" href="style.css?v=77" />
 </head>
 <body class="infinite-body">
   <div class="wrap infinite-wrap">
     <header class="topbar infinite-topbar">
-      <a class="ghost-btn infinite-back" href="game.html?v=76">← 사과게임으로</a>
+      <a class="ghost-btn infinite-back" href="game.html?v=77">← 사과게임으로</a>
       <h1 class="title infinite-title">🍎 무한 사과게임 <span class="beta-badge">BETA</span></h1>
       <div class="infinite-topbar__right">
         <button type="button" class="ghost-btn" id="inf-rules-btn">📖 점수 계산법</button>
@@ -20,7 +20,7 @@
 
     <p class="infinite-desc">
       터진 자리엔 새 사과가 다시 돋아나 <strong>끝없이</strong> 이어집니다.
-      <strong>5초</strong> 안에 계속 터뜨리세요. <strong>2.5초</strong> 안에 이어 터뜨리면 <strong>콤보</strong>가 쌓입니다.
+      <strong>6초</strong>로 시작해 점수가 오를수록 제한시간이 짧아집니다. <strong>2.5초</strong> 안에 이어 터뜨리면 <strong>콤보</strong>가 쌓입니다.
     </p>
 
     <div class="hud infinite-hud">
@@ -36,6 +36,10 @@
         <span class="hud__label">배율</span>
         <span class="hud__value" id="inf-mult">×1.0</span>
       </div>
+      <div class="hud__box">
+        <span class="hud__label">제한</span>
+        <span class="hud__value" id="inf-limit">6.0초</span>
+      </div>
     </div>
 
     <div class="stage infinite-stage">
@@ -50,7 +54,7 @@
               <p class="overlay__title">무한 사과게임 <span class="beta-badge">BETA</span></p>
               <p class="overlay__desc">
                 합이 10이 되는 사과를 드래그로 묶어 터뜨리세요.<br />
-                5초 안에 못 터뜨리면 게임이 끝납니다.
+                제한시간 안에 못 터뜨리면 게임이 끝납니다.
               </p>
               <button type="button" class="play-btn" id="inf-start-btn">시작</button>
             </div>
@@ -141,8 +145,12 @@
           <dd>직전에 터뜨린 뒤 <b>2.5초 안에</b> 다시 터뜨려야 콤보가 이어집니다.
             뜸을 들이면 성공해도 콤보가 <b>1로 초기화</b>됩니다.</dd>
 
+          <dt>제한시간 (점점 짧아짐)</dt>
+          <dd><b>6초</b>로 시작해 <b>100점마다 0.1초씩</b> 줄고, <b>4초</b>에서 멈춥니다.<br />
+            <span class="rules-eg">0점 = 6.0초 · 500점 = 5.5초 · 2000점↑ = 4.0초</span></dd>
+
           <dt>게임 종료</dt>
-          <dd><b>5초</b> 안에 하나도 못 터뜨리면 종료. 터뜨릴 때마다 시간이 다시 채워집니다.</dd>
+          <dd>제한시간 안에 하나도 못 터뜨리면 종료. 터뜨릴 때마다 시간이 다시 채워집니다.</dd>
         </dl>
 
         <p class="rules-example">
@@ -163,6 +171,6 @@
     </div>
   </div>
 
-  <script type="module" src="infinite.js?v=76"></script>
+  <script type="module" src="infinite.js?v=77"></script>
 </body>
 </html>

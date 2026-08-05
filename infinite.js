@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=76";
-import { getFingerprint } from "./fingerprint.js?v=76";
+import { getFirestoreApi } from "./firebase-app.js?v=77";
+import { getFingerprint } from "./fingerprint.js?v=77";
 import {
   getNickname,
   reserveNickname,
@@ -8,7 +8,7 @@ import {
   sendMessage,
   watchMessages,
   fetchChatLocked,
-} from "./chat.js?v=76";
+} from "./chat.js?v=77";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -20,9 +20,18 @@ import {
 const COLS = 7;
 const ROWS = 10;
 const TARGET_SUM = 10;
-// 100점대 플레이어의 평균 판단 시간 기준. 계속 손이 빨라야 하는 긴장감이 핵심이다.
-const POP_MS = 5000;
+// 제한시간은 점수가 오를수록 짧아진다. 6초로 시작해 100점마다 0.1초씩 줄고
+// 4초에서 멈춘다 — 20단계, 즉 2000점부터는 계속 4초다.
+const POP_START_MS = 6000;
+const POP_MIN_MS = 4000;
+const POP_STEP_MS = 100;
+const POP_STEP_SCORE = 100;
 const FIRST_POP_MS = 8000; // 시작 직후 첫 판만 판을 한 번 훑어볼 시간을 조금 더 준다
+
+function popMsForScore(currentScore) {
+  const steps = Math.floor(currentScore / POP_STEP_SCORE);
+  return Math.max(POP_MIN_MS, POP_START_MS - steps * POP_STEP_MS);
+}
 const RESPAWN_MS = 1500; // 터진 칸에 새 사과가 돋아나기까지
 const SPROUT_WARN_MS = 700; // 돋아나기 이만큼 전부터 자리를 예고한다
 const GOLDEN_CHANCE = 0.06;
@@ -48,6 +57,7 @@ const scoreEl = document.getElementById("inf-score");
 const sideScoreEl = document.getElementById("inf-side-score");
 const comboEl = document.getElementById("inf-combo");
 const multEl = document.getElementById("inf-mult");
+const limitEl = document.getElementById("inf-limit");
 const timerFillEl = document.getElementById("inf-timer-fill");
 const timerSecondsEl = document.getElementById("inf-timer-seconds");
 const startOverlay = document.getElementById("inf-start-overlay");
@@ -192,6 +202,8 @@ function multiplierFor(comboCount) {
 function popCell(cell) {
   cell.empty = true;
   cell.el.classList.add("is-cleared");
+  // 예고 이펙트에 터진 사과의 숫자가 남아 보이지 않도록 지운다
+  cell.num.textContent = "";
 
   // 다시 돋아나기 직전에 자리를 예고해준다. 갑자기 튀어나오면
   // 이미 훑어본 칸이 조용히 바뀌어 있어 판을 다시 읽어야 한다.
@@ -242,7 +254,9 @@ function finalizeSelection() {
     comboEl.textContent = combo;
     multEl.textContent = `×${mult.toFixed(1)}`;
 
-    currentPopMs = POP_MS;
+    // 점수가 오를수록 다음 판정까지 주어지는 시간이 짧아진다
+    currentPopMs = popMsForScore(score);
+    limitEl.textContent = `${(currentPopMs / 1000).toFixed(1)}초`;
     popDeadline = Date.now() + currentPopMs;
   }
 
@@ -315,6 +329,7 @@ function startGame() {
   sideScoreEl.textContent = "0";
   comboEl.textContent = "0";
   multEl.textContent = "×1.0";
+  limitEl.textContent = `${(POP_START_MS / 1000).toFixed(1)}초`;
   submitStatusEl.textContent = "";
 
   startOverlay.hidden = true;
