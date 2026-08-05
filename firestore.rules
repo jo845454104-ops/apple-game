@@ -407,6 +407,37 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // 관리자 비밀번호 해시. 아무도 읽을 수 없다.
+    // 예전에는 해시를 script.js 에 박아뒀는데, 그러면 누구나 파일을 열어
+    // 해시를 가져가 오프라인에서 마음껏 대입해볼 수 있었다.
+    // 이제 여기 두고, 아래 adminSessions 규칙이 서버에서 대조한다.
+    // (규칙 안의 get() 은 read 규칙을 거치지 않으므로 대조는 계속 동작한다)
+    match /config/admin {
+      allow read: if false;
+      // 최초 1회만, 그리고 미리 정해둔 해시값으로만 생성할 수 있다.
+      // 문서가 생긴 뒤에는 exists() 때문에 영원히 잠긴다.
+      // 값까지 못박아서, 이 창으로 남이 자기 비밀번호를 심을 수도 없다.
+      allow create: if !exists(/databases/$(database)/documents/config/admin)
+        && request.resource.data.keys().hasOnly(['hash'])
+        && request.resource.data.hash ==
+           '6404d528299985d4d8381c47053b7b362a204fb7d6d49d61e71d3cb96497b8a1';
+      allow update, delete: if false;
+    }
+
+    // 관리자 인증. 비밀번호 해시가 맞아야 문서를 쓸 수 있다.
+    // 즉 "쓰기에 성공했다 = 비밀번호가 맞다" 가 되어, 클라이언트가 해시를
+    // 손에 넣지 않고도 인증할 수 있다. 대입 공격은 매번 네트워크 왕복이
+    // 필요해지므로 오프라인 대입보다 훨씬 느려진다.
+    match /adminSessions/{cid} {
+      allow read: if false;
+      allow create, update: if realClientId(cid)
+        && request.resource.data.keys().hasOnly(['hash', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/config/admin)
+        && request.resource.data.hash == get(/databases/$(database)/documents/config/admin).data.hash;
+      allow delete: if false;
+    }
+
     // 접속자 수 집계용 단일 문서.
     // 개별 항목까지는 규칙으로 검증할 수 없지만, 문서를 통째로 지우거나
     // 엉뚱한 필드를 심는 것은 막는다.

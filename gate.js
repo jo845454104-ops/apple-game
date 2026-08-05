@@ -1,4 +1,4 @@
-import { claimPass, applyNickname, savedPass, startGuest, isGuest } from "./pass.js?v=82";
+import { claimPass, applyNickname, savedPass, startGuest, isGuest } from "./pass.js?v=83";
 
 // 입장 화면. 코드가 맞으면 게임 페이지로 넘긴다.
 // 화면을 건너뛰고 game.html 을 직접 열 수는 있지만, 그쪽에서도 코드를 확인하고
@@ -14,7 +14,7 @@ const continueBtn = document.getElementById("continue-btn");
 const freshBtn = document.getElementById("fresh-btn");
 
 function go() {
-  location.replace("game.html?v=82");
+  location.replace("game.html?v=83");
 }
 
 function sanitize(value) {

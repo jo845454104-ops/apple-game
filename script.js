@@ -1,5 +1,6 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=82";
-import { findTargeted } from "./profanity.js?v=82";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=83";
+import { findTargeted } from "./profanity.js?v=83";
+import { getFirestoreApi } from "./firebase-app.js?v=83";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -12,8 +13,8 @@ import {
   fetchMyPrizes,
   PRIZES,
   fetchTodayPrizes,
-} from "./roulette.js?v=82";
-import { nicknameKey } from "./profanity.js?v=82";
+} from "./roulette.js?v=83";
+import { nicknameKey } from "./profanity.js?v=83";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -22,7 +23,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=82";
+} from "./shop.js?v=83";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -36,7 +37,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=82";
+} from "./duel.js?v=83";
 import {
   activeEvent,
   upcomingEvent,
@@ -44,7 +45,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=82";
+} from "./event.js?v=83";
 import {
   getNickname,
   setNickname,
@@ -66,7 +67,7 @@ import {
   changeNickname,
   nextNicknameChangeAt,
   NICK_CHANGE_DAYS,
-} from "./chat.js?v=82";
+} from "./chat.js?v=83";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -872,9 +873,9 @@ function renderTicker(list) {
   tickerTrackEl.innerHTML = rows
     .map((r) => {
       const tag = r.isEvent ? "🔥 돌발 이벤트 " : "";
-      return `<span class="win">
-        ${tag}<b>${escapeHtml(r.name || "?")}</b>님 ${r.score}점 · ${escapeHtml(r.prize)} 당첨!
-      </span>`;
+      // 줄바꿈·들여쓰기를 넣으면 nowrap 때문에 공백이 그대로 보여 간격이 들쭉날쭉해진다.
+      // 한 줄로 붙여 쓸 것.
+      return `<span class="win">${tag}<b>${escapeHtml(r.name || "?")}</b>님 ${r.score}점 · ${escapeHtml(r.prize)} 당첨!</span>`;
     })
     .join("");
 }
@@ -1867,11 +1868,12 @@ const onlinePwInput = document.getElementById("online-pw");
 const onlinePwBtn = document.getElementById("online-pw-btn");
 const onlinePwMsg = document.getElementById("online-pw-msg");
 
-// 비밀번호는 코드에 없다. PBKDF2(20만 회) 해시만 두어
-// 해시를 보더라도 비밀번호를 되찾기 어렵게 한다.
-const ADMIN_SALT = "d4dadcbe50374387f6261732ad65cea1";
-const ADMIN_HASH =
-  "837bfa304ec1e67b1e5d7ac3a21b4ea4f2cb5ccb7a857bb30458f2ea1ccab2a4";
+// 비밀번호도, 그 해시도 이 파일에 없다.
+// 해시는 Firestore 의 config/admin 에 있고 아무도 읽을 수 없다.
+// 인증은 "해시가 맞아야 쓰기가 성공하는" 규칙으로 서버에서 대조한다.
+// (예전에는 해시를 여기 박아둬서, 파일을 연 사람이 오프라인에서
+//  마음껏 대입해볼 수 있었다. 소금은 공개되어도 무방하다.)
+const ADMIN_SALT = "3f6374d0bc9ec442ee7eaf1eebc9a007";
 
 // 인증 상태를 저장소에 남기지 않는다. 저장해두면 값만 바꿔 넣어
 // 비밀번호 없이 관리자 화면을 열 수 있기 때문이다.
@@ -2057,6 +2059,26 @@ function applyAdminView() {
   }
 }
 
+// 비밀번호 해시를 서버에 제출한다. 규칙이 config/admin 의 해시와 대조해
+// 일치할 때만 쓰기를 허용하므로, 성공 여부가 곧 인증 결과다.
+// 해시 자체는 클라이언트로 내려오지 않는다.
+async function verifyAdminOnServer(hash) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return null;
+  const { db, api } = ctx;
+  try {
+    await api.setDoc(api.doc(db, "adminSessions", getClientId()), {
+      hash,
+      createdAt: api.serverTimestamp(),
+    });
+    return true;
+  } catch (err) {
+    // 규칙 거부(permission-denied)는 비밀번호 불일치를 뜻한다.
+    // 그 밖의 오류는 연결 문제로 보고 구분해서 알린다.
+    return err?.code === "permission-denied" ? false : null;
+  }
+}
+
 async function checkAdminPassword() {
   const value = onlinePwInput.value;
   if (!value) {
@@ -2065,7 +2087,14 @@ async function checkAdminPassword() {
   }
   onlinePwMsg.textContent = "확인 중...";
   const hash = await derive(value);
-  if (hash !== ADMIN_HASH) {
+
+  // 서버가 대조한다. 쓰기에 성공하면 비밀번호가 맞은 것이다.
+  const ok = await verifyAdminOnServer(hash);
+  if (ok === null) {
+    onlinePwMsg.textContent = "서버에 연결하지 못했습니다.";
+    return;
+  }
+  if (!ok) {
     onlinePwMsg.textContent = "비밀번호가 올바르지 않습니다.";
     return;
   }
