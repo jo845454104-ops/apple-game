@@ -1,6 +1,6 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=83";
-import { findTargeted } from "./profanity.js?v=83";
-import { getFirestoreApi } from "./firebase-app.js?v=83";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=84";
+import { findTargeted } from "./profanity.js?v=84";
+import { getFirestoreApi } from "./firebase-app.js?v=84";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -13,8 +13,8 @@ import {
   fetchMyPrizes,
   PRIZES,
   fetchTodayPrizes,
-} from "./roulette.js?v=83";
-import { nicknameKey } from "./profanity.js?v=83";
+} from "./roulette.js?v=84";
+import { nicknameKey } from "./profanity.js?v=84";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -23,7 +23,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=83";
+} from "./shop.js?v=84";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -37,7 +37,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=83";
+} from "./duel.js?v=84";
 import {
   activeEvent,
   upcomingEvent,
@@ -45,7 +45,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=83";
+} from "./event.js?v=84";
 import {
   getNickname,
   setNickname,
@@ -67,7 +67,7 @@ import {
   changeNickname,
   nextNicknameChangeAt,
   NICK_CHANGE_DAYS,
-} from "./chat.js?v=83";
+} from "./chat.js?v=84";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -792,7 +792,9 @@ async function openRoulette(score, scoreId) {
     rouletteSpinBtn.hidden = true;
     return;
   }
-  rouletteSubEl.textContent = `남은 기회 ${left}/${DAILY_SPINS}회 · ${reset}에 초기화`;
+  // 이번 100점으로는 딱 한 번 돌린다. 남은 횟수는 "앞으로 100점을 더 내면
+  // 쓸 수 있는 기회"라는 뜻이다.
+  rouletteSubEl.textContent = `이번 100점으로 1회 · 남은 기회 ${left}/${DAILY_SPINS}회 · ${reset}에 초기화`;
   rouletteSpinBtn.hidden = false;
   rouletteSpinBtn.disabled = false;
 }
@@ -839,8 +841,11 @@ rouletteSpinBtn.addEventListener("click", async () => {
         rouletteResultEl.className = "roulette__result is-lose";
         rouletteSpinBtn.hidden = true;
       } else if (res.left > 0) {
-        rouletteSubEl.textContent = `남은 기회 ${res.left}/${DAILY_SPINS}회`;
-        rouletteSpinBtn.disabled = false;
+        // 100점을 낼 때마다 한 번씩만 돌린다. 한 판으로 연달아 돌리지 못하게
+        // 여기서 버튼을 닫는다. 다시 돌리려면 100점을 또 내야 한다.
+        rouletteSubEl.textContent =
+          `남은 기회 ${res.left}/${DAILY_SPINS}회 · 100점을 다시 넘기면 또 돌릴 수 있어요`;
+        rouletteSpinBtn.hidden = true;
       } else {
         rouletteSubEl.textContent = "오늘 기회를 모두 사용했습니다";
         rouletteSpinBtn.hidden = true;

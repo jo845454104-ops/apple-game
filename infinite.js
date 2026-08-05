@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=83";
-import { getFingerprint } from "./fingerprint.js?v=83";
+import { getFirestoreApi } from "./firebase-app.js?v=84";
+import { getFingerprint } from "./fingerprint.js?v=84";
 import {
   getNickname,
   reserveNickname,
@@ -11,7 +11,7 @@ import {
   changeNickname,
   nextNicknameChangeAt,
   NICK_CHANGE_DAYS,
-} from "./chat.js?v=83";
+} from "./chat.js?v=84";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.

@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=83";
-import { getClientId } from "./chat.js?v=83";
-import { getFingerprint } from "./fingerprint.js?v=83";
+import { getFirestoreApi } from "./firebase-app.js?v=84";
+import { getClientId } from "./chat.js?v=84";
+import { getFingerprint } from "./fingerprint.js?v=84";
 
 export const ROULETTE_MIN_SCORE = 100;
 export const DAILY_SPINS = 3;
@@ -25,13 +25,14 @@ export function nextResetAt(now = new Date()) {
 }
 
 // 확률 합계는 100%. 나머지는 전부 꽝이다.
-// angle은 원판에 그려지는 각도(시각용)이고, 당첨은 아래 확률로만 정해진다.
+// angle은 원판에 그려지는 각도(시각용, 합 360)이고, 당첨은 아래 확률로만 정해진다.
 export const PRIZES = [
   { id: "meal", label: "식사권", emoji: "🍱", chance: 0.01, angle: 6, color: "#f59e0b" },
-  { id: "coffee", label: "커피", emoji: "☕", chance: 3, angle: 40, color: "#8b5cf6" },
-  { id: "date", label: "정식이와 데이트권", emoji: "💕", chance: 5, angle: 50, color: "#ec4899" },
-  { id: "flick", label: "정식 딱밤", emoji: "👉", chance: 20, angle: 90, color: "#3b82f6" },
-  { id: "none", label: "꽝", emoji: "💨", chance: 71.99, angle: 174, color: "#94a3b8" },
+  { id: "coffee", label: "커피", emoji: "☕", chance: 2, angle: 30, color: "#8b5cf6" },
+  { id: "date", label: "정식이와 데이트권", emoji: "💕", chance: 1, angle: 20, color: "#ec4899" },
+  { id: "flick", label: "정식 딱밤", emoji: "👉", chance: 3, angle: 30, color: "#3b82f6" },
+  { id: "hit", label: "창호 때리기", emoji: "🥊", chance: 20, angle: 74, color: "#10b981" },
+  { id: "none", label: "꽝", emoji: "💨", chance: 73.99, angle: 200, color: "#94a3b8" },
 ];
 
 // 원판에서 각 구간이 차지하는 시작 각도를 미리 계산해둔다.
