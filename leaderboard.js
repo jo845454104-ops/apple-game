@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=81";
-import { getClientId } from "./chat.js?v=81";
-import { getFingerprint } from "./fingerprint.js?v=81";
+import { getFirestoreApi } from "./firebase-app.js?v=82";
+import { getClientId } from "./chat.js?v=82";
+import { getFingerprint } from "./fingerprint.js?v=82";
 
 const COLLECTION_NAME = "scores";
 const LOCAL_KEY = "apple-game-local-leaderboard";
@@ -168,7 +168,7 @@ export async function submitScore(name, score, meta = {}) {
   const ctx = await getFirestoreApi();
   if (ctx) {
     const { db, api } = ctx;
-    await api.addDoc(api.collection(db, COLLECTION_NAME), {
+    const ref = await api.addDoc(api.collection(db, COLLECTION_NAME), {
       name: name.slice(0, 12),
       score,
       clears,
@@ -181,7 +181,8 @@ export async function submitScore(name, score, meta = {}) {
       moves: JSON.stringify(meta.moves ?? []).slice(0, 20000),
       createdAt: api.serverTimestamp(),
     });
-    return { online: true };
+    // 문서 ID를 돌려준다. 룰렛이 "실제로 등록된 점수"를 지목해야 열리기 때문이다.
+    return { online: true, id: ref.id };
   }
   submitLocalScore(name.slice(0, 12), score);
   return { online: false };

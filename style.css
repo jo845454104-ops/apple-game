@@ -2240,6 +2240,43 @@ body {
   border-color: transparent;
 }
 
+/* 코너 버튼이 모두 흰 알약이라 서로 구분이 안 돼서 기능별로 색을 준다 */
+#mystats-btn {
+  color: #fff;
+  background: #0ea5e9;
+  border-color: transparent;
+}
+
+#myprize-btn {
+  color: #fff;
+  background: #14b8a6;
+  border-color: transparent;
+}
+
+#shop-btn {
+  color: #7c2d12;
+  background: #fbbf24;
+  border-color: transparent;
+}
+
+.corner-btn--infinite {
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #f43f5e);
+  border-color: transparent;
+}
+
+#mystats-btn:hover,
+#myprize-btn:hover,
+#shop-btn:hover,
+.corner-btn--infinite:hover {
+  color: #fff;
+  filter: brightness(1.08);
+}
+
+#shop-btn:hover {
+  color: #7c2d12;
+}
+
 .corner-btn--accent:hover {
   color: #fff;
   background: var(--accent-hover);

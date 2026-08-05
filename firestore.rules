@@ -97,18 +97,21 @@ service cloud.firestore {
         && cleanName(request.resource.data.name)
         && request.resource.data.score is number
         && request.resource.data.score >= 0
-        && request.resource.data.score <= 2000000
+        && request.resource.data.score <= 500000
         && request.resource.data.combo is number
         && request.resource.data.combo >= 0
-        && request.resource.data.combo <= 2000
+        // 콤보는 매칭할 때마다 1씩 오르므로 매칭 횟수를 넘을 수 없다
+        && request.resource.data.combo <= request.resource.data.clears
         && request.resource.data.clears is number
         && request.resource.data.clears >= 0
-        // 판정 한 번의 이론상 최대치는 9개 전부 황금 + 최대 배율(×10)이라 1만점대다.
-        // 넉넉히 잡아 명백한 조작만 거른다.
-        && request.resource.data.score <= (request.resource.data.clears + 1) * 15000
+        && request.resource.data.clears <= 2000
+        // 판정 한 번에 낼 수 있는 현실적 최대치(5개+황금 다수, 최대 배율)가 3천점대다
+        && request.resource.data.score <= (request.resource.data.clears + 1) * 3500
         && request.resource.data.durationMs is number
-        && request.resource.data.durationMs >= 0
         && request.resource.data.durationMs <= 1800000
+        // 사람이 드래그로 매칭하는 최소 간격은 250ms다. 이 하한이 없으면
+        // "1밀리초에 1000번 매칭" 같은 기록이 그대로 통과한다(실제로 뚫렸다).
+        && request.resource.data.durationMs >= request.resource.data.clears * 250
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
     }
@@ -234,9 +237,19 @@ service cloud.firestore {
     // 같은 ID를 다시 만들 수 없어 하루 3회를 서버가 강제한다.
     match /rewards/{doc} {
       allow read: if true;
+      // 룰렛은 "실제로 등록된 점수"에만 준다.
+      // 예전에는 클라이언트가 주장한 점수만 보고 열어줘서, 점수를 등록하지 않고도
+      // 경품을 받아갈 수 있었다(실제로 그렇게 받아간 기록이 있다).
+      // 이제 sid 로 그 점수 문서를 지목해야 하고, 서버가 문서를 열어
+      // 같은 사람·같은 기기·같은 점수인지 대조한다.
       allow create: if request.resource.data.keys().hasOnly(
-          ['name', 'nk', 'n', 'prize', 'score', 'cid', 'fp', 'createdAt']
+          ['name', 'nk', 'n', 'prize', 'score', 'sid', 'cid', 'fp', 'createdAt']
         )
+        && request.resource.data.sid is string
+        && exists(/databases/$(database)/documents/scores/$(request.resource.data.sid))
+        && get(/databases/$(database)/documents/scores/$(request.resource.data.sid)).data.cid == request.resource.data.cid
+        && get(/databases/$(database)/documents/scores/$(request.resource.data.sid)).data.name == request.resource.data.name
+        && get(/databases/$(database)/documents/scores/$(request.resource.data.sid)).data.score == request.resource.data.score
         && request.resource.data.n is int
         && request.resource.data.n >= 1
         && request.resource.data.n <= 3

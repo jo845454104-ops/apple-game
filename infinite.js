@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=81";
-import { getFingerprint } from "./fingerprint.js?v=81";
+import { getFirestoreApi } from "./firebase-app.js?v=82";
+import { getFingerprint } from "./fingerprint.js?v=82";
 import {
   getNickname,
   reserveNickname,
@@ -11,7 +11,7 @@ import {
   changeNickname,
   nextNicknameChangeAt,
   NICK_CHANGE_DAYS,
-} from "./chat.js?v=81";
+} from "./chat.js?v=82";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -55,6 +55,12 @@ const BIG_COMBO_BONUS = 30;
 // 콤보는 빠르게 이어 터뜨릴 때만 쌓인다. 직전 판정에서 이 시간을 넘기면
 // 터뜨리는 데 성공해도 콤보가 1로 돌아간다.
 const COMBO_WINDOW_MS = 2500;
+// 사람이 드래그로 매칭할 수 있는 최소 간격. 이보다 빠른 매칭은 자동화로 본다.
+// 실측 정상 플레이는 아무리 빨라도 300ms 아래로 잘 내려가지 않는다.
+const MIN_POP_INTERVAL_MS = 150;
+// 이 횟수를 넘게 걸리면 조작으로 보고 판을 끝내고 등록을 막는다.
+// 한두 번은 더블클릭 같은 사고일 수 있어 여유를 둔다.
+const FAST_POP_LIMIT = 5;
 
 const gridEl = document.getElementById("inf-grid");
 const boardEl = gridEl.parentElement;
@@ -93,6 +99,8 @@ let playing = false;
 let scoreSubmitted = false;
 let startedAt = 0;
 let lastPopAt = 0;
+let fastPops = 0;
+let cheatDetected = false;
 let popDeadline = 0;
 let currentPopMs = FIRST_POP_MS;
 let tickId = null;
@@ -262,8 +270,24 @@ function finalizeSelection() {
   const sum = selected.reduce((acc, c) => acc + c.value, 0);
 
   if (playing && sum === TARGET_SUM && selected.length > 0) {
-    // 콤보는 빠르게 이어 터뜨릴 때만 쌓인다. 뜸을 들이면 1부터 다시 시작한다.
     const now = Date.now();
+
+    // 사람이 낼 수 없는 속도로 이어지면 점수를 주지 않는다.
+    // 자동화(오토클리커·스크립트)로 순식간에 판을 쓸어담는 것을 막는다.
+    if (lastPopAt > 0 && now - lastPopAt < MIN_POP_INTERVAL_MS) {
+      fastPops += 1;
+      lastPopAt = now;
+      if (fastPops >= FAST_POP_LIMIT) {
+        cheatDetected = true;
+        clearSelectionVisual();
+        endGame();
+        return;
+      }
+      clearSelectionVisual();
+      return;
+    }
+
+    // 콤보는 빠르게 이어 터뜨릴 때만 쌓인다. 뜸을 들이면 1부터 다시 시작한다.
     const inWindow = lastPopAt > 0 && now - lastPopAt <= COMBO_WINDOW_MS;
     combo = inWindow ? combo + 1 : 1;
     lastPopAt = now;
@@ -356,6 +380,8 @@ function startGame() {
   playing = true;
   startedAt = Date.now();
   lastPopAt = 0;
+  fastPops = 0;
+  cheatDetected = false;
   currentPopMs = FIRST_POP_MS;
   popDeadline = startedAt + currentPopMs;
 
@@ -389,9 +415,31 @@ function endGame() {
 
   const nick = getNickname();
   nicknameEl.textContent = nick || "닉네임 없음";
-  submitBtn.disabled = !nick;
+  submitBtn.disabled = !nick || cheatDetected;
+
+  // 자동화가 감지된 판은 랭킹에 올리지 않는다. 플레이 자체는 막지 않는다.
+  submitStatusEl.textContent = cheatDetected
+    ? "비정상적으로 빠른 조작이 감지되어 이 기록은 등록할 수 없습니다."
+    : "";
 
   endOverlay.hidden = false;
+}
+
+// 서버 규칙과 같은 조건을 여기서도 확인해, 조작된 기록은 등록 단계에서 걸러진다.
+function checkInfinitePlausible() {
+  if (cheatDetected) return "비정상적으로 빠른 조작이 감지된 기록입니다.";
+  if (!Number.isFinite(score) || score < 0 || score > 500000) return "점수 범위 오류";
+  if (!Number.isInteger(clearEvents) || clearEvents < 0 || clearEvents > 2000) {
+    return "매칭 횟수 오류";
+  }
+  if (bestCombo > clearEvents) return "콤보가 매칭 횟수보다 많습니다";
+  if (score > (clearEvents + 1) * 3500) return "매칭 대비 점수가 비정상입니다";
+  const durationMs = Date.now() - startedAt;
+  if (durationMs > 1800000) return "플레이 시간 오류";
+  if (durationMs < clearEvents * MIN_POP_INTERVAL_MS) {
+    return "플레이 시간이 매칭 횟수에 비해 너무 짧습니다";
+  }
+  return null;
 }
 
 function getClientId() {
@@ -410,6 +458,13 @@ async function submitScore() {
   if (scoreSubmitted) return;
   const name = getNickname();
   if (!name) return;
+
+  const problem = checkInfinitePlausible();
+  if (problem) {
+    submitStatusEl.textContent = problem;
+    submitBtn.disabled = true;
+    return;
+  }
 
   submitBtn.disabled = true;
   submitStatusEl.textContent = "등록하는 중…";

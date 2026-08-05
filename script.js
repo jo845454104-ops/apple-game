@@ -1,5 +1,5 @@
-import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=81";
-import { findTargeted } from "./profanity.js?v=81";
+import { submitScore, fetchTopScores, getNextReset, fetchScoresForAdmin, fetchMyScores } from "./leaderboard.js?v=82";
+import { findTargeted } from "./profanity.js?v=82";
 import {
   ROULETTE_MIN_SCORE,
   DAILY_SPINS,
@@ -12,8 +12,8 @@ import {
   fetchMyPrizes,
   PRIZES,
   fetchTodayPrizes,
-} from "./roulette.js?v=81";
-import { nicknameKey } from "./profanity.js?v=81";
+} from "./roulette.js?v=82";
+import { nicknameKey } from "./profanity.js?v=82";
 import {
   TICKET_KINDS,
   issueTicket,
@@ -22,7 +22,7 @@ import {
   useTicket,
   transferTicket,
   prettySerial,
-} from "./shop.js?v=81";
+} from "./shop.js?v=82";
 import {
   makeRoomCode,
   setGuestStakes,
@@ -36,7 +36,7 @@ import {
   duelWinner,
   forfeit,
   isForfeitWin,
-} from "./duel.js?v=81";
+} from "./duel.js?v=82";
 import {
   activeEvent,
   upcomingEvent,
@@ -44,7 +44,7 @@ import {
   fetchMyEventPrizes,
   watchEventWinners,
   EVENT_PRIZE,
-} from "./event.js?v=81";
+} from "./event.js?v=82";
 import {
   getNickname,
   setNickname,
@@ -66,7 +66,7 @@ import {
   changeNickname,
   nextNicknameChangeAt,
   NICK_CHANGE_DAYS,
-} from "./chat.js?v=81";
+} from "./chat.js?v=82";
 
 const GAME_SECONDS = 120;
 const COLS = 17;
@@ -394,10 +394,8 @@ function endGame(cleared) {
       .catch((err) => console.error("이벤트 기록 실패", err));
   }
 
-  // 100점을 넘기면 룰렛 기회를 준다
-  if (score >= ROULETTE_MIN_SCORE && getNickname()) {
-    window.setTimeout(() => openRoulette(score), 600);
-  }
+  // 룰렛은 여기서 열지 않는다. 점수가 실제로 랭킹에 등록된 뒤에만 열어야
+  // 조작된 점수로 경품을 받아가는 것을 막을 수 있다(실제로 뚫렸던 구멍이다).
 }
 
 // 채팅 닉네임과 랭킹 이름을 하나로 쓴다. 이미 정해둔 닉네임이 있으면 그대로 사용한다.
@@ -451,6 +449,12 @@ async function handleSubmitScore() {
     submitStatusEl.textContent = result.online
       ? "온라인 랭킹에 등록되었습니다!"
       : "로컬 랭킹에 저장되었습니다 (온라인 랭킹 미설정)";
+
+    // 등록에 성공한 기록만 룰렛을 열 수 있다. 등록 과정에서 리플레이 검증과
+    // 서버 규칙을 모두 통과했으므로, 여기까지 온 점수는 실제 기록이다.
+    if (result.online && result.id && actualScore >= ROULETTE_MIN_SCORE) {
+      window.setTimeout(() => openRoulette(actualScore, result.id), 600);
+    }
   } catch (err) {
     console.error(err);
     // 조작 판정은 값 자체가 불가능할 때만 한다.
@@ -755,6 +759,8 @@ const tickerTrackEl = document.getElementById("prize-ticker-track");
 
 const SEGMENTS = segments();
 let rouletteScore = 0;
+// 이 룰렛의 근거가 된 점수 문서 ID. 등록된 기록에만 룰렛을 준다.
+let rouletteScoreId = "";
 let spinning = false;
 let wheelAngle = 0;
 
@@ -763,8 +769,9 @@ wheelEl.style.background = `conic-gradient(${SEGMENTS.map(
   (s) => `${s.color} ${s.start}deg ${s.end}deg`
 ).join(", ")})`;
 
-async function openRoulette(score) {
+async function openRoulette(score, scoreId) {
   rouletteScore = score;
+  rouletteScoreId = scoreId || "";
   spinning = false;
   wheelAngle = 0;
   wheelEl.style.transition = "none";
@@ -823,7 +830,8 @@ rouletteSpinBtn.addEventListener("click", async () => {
         getNickname(),
         nicknameKey(getNickname()),
         prize.label,
-        rouletteScore
+        rouletteScore,
+        rouletteScoreId
       );
       if (!res.ok) {
         rouletteResultEl.textContent = res.reason;

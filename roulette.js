@@ -1,6 +1,6 @@
-import { getFirestoreApi } from "./firebase-app.js?v=81";
-import { getClientId } from "./chat.js?v=81";
-import { getFingerprint } from "./fingerprint.js?v=81";
+import { getFirestoreApi } from "./firebase-app.js?v=82";
+import { getClientId } from "./chat.js?v=82";
+import { getFingerprint } from "./fingerprint.js?v=82";
 
 export const ROULETTE_MIN_SCORE = 100;
 export const DAILY_SPINS = 3;
@@ -74,7 +74,7 @@ export async function remainingSpins(nickKey) {
   return Math.max(0, DAILY_SPINS - (await usedSpins(nickKey)));
 }
 
-export async function recordPrize(name, nickKey, prize, score) {
+export async function recordPrize(name, nickKey, prize, score, scoreId) {
   const ctx = await getFirestoreApi();
   if (!ctx) throw new Error("서버에 연결되어 있지 않습니다.");
   const { db, api } = ctx;
@@ -100,6 +100,9 @@ export async function recordPrize(name, nickKey, prize, score) {
         n,
         prize: String(prize).slice(0, 20),
         score,
+        // 이 룰렛의 근거가 된 점수 문서. 서버 규칙이 이 문서를 실제로 열어보고
+        // 이름·기기·점수가 맞는지 확인하므로, 점수를 등록하지 않고는 돌릴 수 없다.
+        sid: String(scoreId || ""),
         cid: getClientId(),
         fp,
         createdAt: api.serverTimestamp(),
