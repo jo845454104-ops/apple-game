@@ -1,5 +1,17 @@
 {
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "hosting": {
+    "site": "dsa-apple",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".git/**",
+      "**/.*",
+      "**/node_modules/**",
+      "README.md",
+      "firestore.rules"
+    ]
   }
 }

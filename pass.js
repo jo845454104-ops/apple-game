@@ -1,4 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=64";
+import { getFirestoreApi } from "./firebase-app.js?v=65";
+import { nicknameKey } from "./profanity.js?v=65";
 
 // 입장 코드
 // 운영자가 CLI로 발급한 코드를 가진 사람만 게임에 들어온다.
@@ -6,6 +7,9 @@ import { getFirestoreApi } from "./firebase-app.js?v=64";
 
 const PASS_KEY = "apple-game-pass";
 const CID_KEY = "apple-game-client-id";
+// chat.js 의 NICK_KEY 와 반드시 같은 값이어야 한다. 여기서 미리 채워두면
+// game.html 이 뜰 때 이미 닉네임이 있는 것으로 보여 입력 화면을 건너뛴다.
+const NICK_KEY = "apple-game-nickname";
 
 // 이 시간 동안 신호가 없으면 자리를 비운 것으로 보고 다른 기기가 이어받는다.
 export const IDLE_MS = 90 * 1000;
@@ -77,8 +81,9 @@ function myCid() {
 // 이미 다른 기기가 쓰고 있으면 실패한다(나중 사람 거부).
 export async function claimPass(code) {
   const clean = String(code || "").trim().toUpperCase();
-  if (!/^[A-Z0-9]{8}$/.test(clean)) {
-    return { ok: false, reason: "코드는 영문·숫자 8자리입니다." };
+  // 기존 8자리 영문·숫자 코드와, "문창호123" 같은 사람 이름 기반 코드를 함께 지원한다.
+  if (clean.length < 2 || clean.length > 20 || !/^[A-Z0-9가-힣]+$/.test(clean)) {
+    return { ok: false, reason: "올바른 코드를 입력해주세요." };
   }
 
   const ctx = await getFirestoreApi();
@@ -119,7 +124,46 @@ export async function claimPass(code) {
   }
 
   savePass(clean);
+
+  // 코드에 nick이 박혀 있으면(운영자가 발급 시 넣어둔 값) 자동으로
+  // 닉네임까지 확보한다. 실패해도 입장 자체는 막지 않는다 — game.html에서
+  // 수동으로 닉네임을 넣는 기존 흐름으로 자연스럽게 넘어간다.
+  if (data.nick) {
+    const gotNick = await claimNickname(data.nick, cid, clean).catch(() => false);
+    if (gotNick) {
+      try {
+        localStorage.setItem(NICK_KEY, data.nick);
+      } catch {
+        /* 저장 못 해도 이번 세션은 game.html에서 다시 시도하면 된다 */
+      }
+    }
+  }
+
   return { ok: true, label: data.label || "" };
+}
+
+// 닉네임을 확보한다. 비어 있으면 새로 만들고, 예전 기기에 걸려 있던
+// 내 닉네임이면(방금 이 코드로 정상 입장했으므로) 소유권을 이 기기로 옮긴다.
+// 전혀 다른 사람이 이미 쓰고 있는 닉네임이면 실패한다.
+async function claimNickname(nick, cid, code) {
+  const ctx = await getFirestoreApi();
+  if (!ctx) return false;
+  const { db, api } = ctx;
+  const ref = api.doc(db, "nicknames", nicknameKey(nick));
+
+  const existing = await api.getDoc(ref).catch(() => null);
+  if (!existing?.exists()) {
+    return api
+      .setDoc(ref, { owner: cid, createdAt: api.serverTimestamp() })
+      .then(() => true)
+      .catch(() => false);
+  }
+  if (existing.data().owner === cid) return true;
+
+  return api
+    .updateDoc(ref, { owner: cid, claimedBy: code })
+    .then(() => true)
+    .catch(() => false);
 }
 
 function getNick() {
