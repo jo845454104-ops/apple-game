@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>🍎 무한 사과게임 (베타)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=69" />
+  <link rel="stylesheet" href="style.css?v=70" />
 </head>
 <body class="infinite-body">
   <div class="wrap infinite-wrap">
     <header class="topbar infinite-topbar">
-      <a class="ghost-btn infinite-back" href="game.html?v=69">← 사과게임으로</a>
+      <a class="ghost-btn infinite-back" href="game.html?v=70">← 사과게임으로</a>
       <h1 class="title infinite-title">🍎 무한 사과게임 <span class="beta-badge">BETA</span></h1>
       <button type="button" class="ghost-btn" id="inf-ranking-btn">🏆 무한 랭킹</button>
     </header>
@@ -73,11 +73,39 @@
 
         <div class="side-timer infinite-side-timer">
           <span class="side-timer__score" id="inf-side-score">0</span>
+          <span class="infinite-timer-seconds" id="inf-timer-seconds">–</span>
           <div class="side-timer__track">
             <div class="side-timer__fill" id="inf-timer-fill"></div>
           </div>
         </div>
       </div>
+
+      <aside class="chat-panel infinite-card">
+        <div class="chat-panel__head">
+          <h2 class="chat-panel__title">💬 채팅</h2>
+          <div class="chat-panel__nick">
+            <span id="nick-label">닉네임 미설정</span>
+          </div>
+        </div>
+
+        <div class="nick-setup" id="nick-setup">
+          <p class="nick-setup__note">⚠️ 닉네임은 <strong>한 번 정하면 변경할 수 없습니다.</strong> 채팅과 랭킹에 함께 사용되니 신중히 정하세요.</p>
+          <div class="nick-setup__row">
+            <input type="text" id="nick-input" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off" />
+            <button type="button" class="play-btn small" id="nick-save-btn">확인</button>
+          </div>
+        </div>
+
+        <ol class="chat-list" id="chat-list">
+          <li class="chat-empty">불러오는 중...</li>
+        </ol>
+
+        <form class="chat-form" id="chat-form">
+          <input type="text" id="chat-input" maxlength="200" placeholder="메시지 입력" autocomplete="off" />
+          <button type="submit" class="chat-send" id="chat-send">전송</button>
+        </form>
+        <p class="chat-status" id="chat-status"></p>
+      </aside>
     </div>
   </div>
 
@@ -91,6 +119,6 @@
     </div>
   </div>
 
-  <script type="module" src="infinite.js?v=69"></script>
+  <script type="module" src="infinite.js?v=70"></script>
 </body>
 </html>

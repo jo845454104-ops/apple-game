@@ -1,5 +1,14 @@
-import { getFirestoreApi } from "./firebase-app.js?v=69";
-import { getFingerprint } from "./fingerprint.js?v=69";
+import { getFirestoreApi } from "./firebase-app.js?v=70";
+import { getFingerprint } from "./fingerprint.js?v=70";
+import {
+  getNickname,
+  reserveNickname,
+  setNickname,
+  checkNickname,
+  sendMessage,
+  watchMessages,
+  fetchChatLocked,
+} from "./chat.js?v=70";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -11,8 +20,10 @@ import { getFingerprint } from "./fingerprint.js?v=69";
 const COLS = 8;
 const ROWS = 12;
 const TARGET_SUM = 10;
-const POP_MS = 9000; // 이 시간 안에 못 터뜨리면 게임 종료
-const FIRST_POP_MS = 14000; // 시작 직후 첫 판정은 자리 잡을 시간을 더 준다
+// 100점대 플레이어의 평균 판단 시간 기준. 넉넉하게 주지 않고 이 시간이
+// 지나면 바로 실패한다 — 계속 손이 빨라야 하는 긴장감이 핵심이다.
+const POP_MS = 5000;
+const FIRST_POP_MS = 8000; // 시작 직후 첫 판만 판을 한 번 훑어볼 시간을 조금 더 준다
 const RESPAWN_MS = 1500; // 터진 칸에 새 사과가 돋아나기까지
 const GOLDEN_CHANCE = 0.06;
 const GOLDEN_BONUS = 15;
@@ -27,6 +38,7 @@ const sideScoreEl = document.getElementById("inf-side-score");
 const comboEl = document.getElementById("inf-combo");
 const multEl = document.getElementById("inf-mult");
 const timerFillEl = document.getElementById("inf-timer-fill");
+const timerSecondsEl = document.getElementById("inf-timer-seconds");
 const startOverlay = document.getElementById("inf-start-overlay");
 const endOverlay = document.getElementById("inf-end-overlay");
 const startBtn = document.getElementById("inf-start-btn");
@@ -241,6 +253,8 @@ function tick() {
   const pct = (remain / currentPopMs) * 100;
   timerFillEl.style.height = `${pct}%`;
   timerFillEl.classList.toggle("is-low", pct <= 30);
+  timerSecondsEl.textContent = Math.ceil(remain / 1000);
+  timerSecondsEl.classList.toggle("is-low", pct <= 30);
   if (remain <= 0) {
     endGame();
     return;
@@ -285,19 +299,11 @@ function endGame() {
   finalScoreEl.textContent = score;
   finalComboEl.textContent = bestCombo;
 
-  const nick = getStoredNickname();
+  const nick = getNickname();
   nicknameEl.textContent = nick || "닉네임 없음";
   submitBtn.disabled = !nick;
 
   endOverlay.hidden = false;
-}
-
-function getStoredNickname() {
-  try {
-    return localStorage.getItem("apple-game-nickname") || "";
-  } catch {
-    return "";
-  }
 }
 
 function getClientId() {
@@ -314,7 +320,7 @@ function getClientId() {
 
 async function submitScore() {
   if (scoreSubmitted) return;
-  const name = getStoredNickname();
+  const name = getNickname();
   if (!name) return;
 
   submitBtn.disabled = true;
@@ -409,3 +415,126 @@ rankingModal.addEventListener("click", (e) => {
 window.addEventListener("resize", () => {
   if (playing) measureRects();
 });
+
+/* ---------------- 채팅 (game.html과 같은 messages 컬렉션을 공유한다) ---------------- */
+
+const nickLabelEl = document.getElementById("nick-label");
+const nickSetupEl = document.getElementById("nick-setup");
+const nickInput = document.getElementById("nick-input");
+const nickSaveBtn = document.getElementById("nick-save-btn");
+const chatListEl = document.getElementById("chat-list");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+const chatSendBtn = document.getElementById("chat-send");
+const chatStatusEl = document.getElementById("chat-status");
+
+let chatLocked = false;
+
+function formatChatTime(createdAt) {
+  if (!createdAt?.seconds) return "";
+  const d = new Date(createdAt.seconds * 1000);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function renderNickname() {
+  const nick = getNickname();
+  const hasNick = nick.length > 0;
+
+  nickLabelEl.textContent = hasNick ? nick : "닉네임 미설정";
+  nickLabelEl.parentElement.classList.toggle("is-set", hasNick);
+  nickSetupEl.hidden = hasNick;
+  chatInput.disabled = chatLocked || !hasNick;
+  chatSendBtn.disabled = chatLocked || !hasNick;
+  chatInput.placeholder = hasNick ? "메시지 입력" : "닉네임을 먼저 정하세요";
+}
+
+function renderMessages(list) {
+  if (list === null) {
+    chatListEl.innerHTML = '<li class="chat-empty">채팅 서버에 연결할 수 없습니다.</li>';
+    return;
+  }
+  if (list.length === 0) {
+    chatListEl.innerHTML = '<li class="chat-empty">아직 대화가 없습니다.</li>';
+    return;
+  }
+
+  const myNick = getNickname();
+  chatListEl.innerHTML = list
+    .map((m) => {
+      const mine = myNick && m.name === myNick ? "is-mine" : "";
+      const time = formatChatTime(m.createdAt);
+      return `<li class="${mine}">
+        <span class="chat-name">${escapeHtml(m.name ?? "익명")}</span>${escapeHtml(m.text ?? "")}${
+        time ? `<span class="chat-time">${time}</span>` : ""
+      }
+      </li>`;
+    })
+    .join("");
+  chatListEl.scrollTop = chatListEl.scrollHeight;
+}
+
+async function saveNicknameFromInput() {
+  const value = nickInput.value.trim();
+  const problem = checkNickname(value);
+  if (problem) {
+    chatStatusEl.textContent = problem;
+    return;
+  }
+
+  nickSaveBtn.disabled = true;
+  chatStatusEl.textContent = "확인 중...";
+  const taken = await reserveNickname(value);
+  nickSaveBtn.disabled = false;
+  if (!taken.ok) {
+    chatStatusEl.textContent = taken.reason;
+    return;
+  }
+
+  setNickname(value);
+  nickInput.value = "";
+  chatStatusEl.textContent = "";
+  renderNickname();
+}
+
+nickSaveBtn.addEventListener("click", saveNicknameFromInput);
+nickInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") saveNicknameFromInput();
+});
+
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = chatInput.value.trim();
+  const nick = getNickname();
+  if (!text || !nick) return;
+
+  chatSendBtn.disabled = true;
+  chatInput.value = "";
+  try {
+    await sendMessage(nick, text);
+    chatStatusEl.textContent = "";
+  } catch (err) {
+    chatStatusEl.textContent = err.message || "전송에 실패했습니다.";
+    chatInput.value = text;
+  } finally {
+    chatSendBtn.disabled = chatLocked || !getNickname();
+  }
+});
+
+async function refreshChatLock() {
+  chatLocked = await fetchChatLocked();
+  const hasNick = !!getNickname();
+  chatInput.disabled = chatLocked || !hasNick;
+  chatSendBtn.disabled = chatLocked || !hasNick;
+  if (chatLocked) {
+    chatInput.placeholder = "운영자가 채팅을 잠갔습니다";
+    chatStatusEl.textContent = "채팅이 잠겨 있습니다.";
+  } else if (hasNick) {
+    chatInput.placeholder = "메시지 입력";
+    if (chatStatusEl.textContent === "채팅이 잠겨 있습니다.") chatStatusEl.textContent = "";
+  }
+}
+
+renderNickname();
+watchMessages(renderMessages);
+refreshChatLock();
+window.setInterval(refreshChatLock, 15000);
