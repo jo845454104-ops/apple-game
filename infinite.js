@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=74";
-import { getFingerprint } from "./fingerprint.js?v=74";
+import { getFirestoreApi } from "./firebase-app.js?v=75";
+import { getFingerprint } from "./fingerprint.js?v=75";
 import {
   getNickname,
   reserveNickname,
@@ -8,7 +8,7 @@ import {
   sendMessage,
   watchMessages,
   fetchChatLocked,
-} from "./chat.js?v=74";
+} from "./chat.js?v=75";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -17,8 +17,8 @@ import {
 // 가끔 황금 사과가 섞여 나와 추가 점수를 준다.
 // 점수 체계가 원래 게임과 달라 랭킹은 infiniteScores 컬렉션에 따로 쌓는다.
 
-const COLS = 9;
-const ROWS = 12;
+const COLS = 7;
+const ROWS = 10;
 const TARGET_SUM = 10;
 // 100점대 플레이어의 평균 판단 시간 기준. 계속 손이 빨라야 하는 긴장감이
 // 핵심이지만, 5초는 판을 읽기에 너무 빠듯해 7초로 잡았다.
