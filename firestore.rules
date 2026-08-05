@@ -112,18 +112,7 @@ service cloud.firestore {
         && cleanName(nick)
         && nick.size() > 0
         && nick.size() <= 12;
-
-      // 입장 코드에 nick 필드를 넣어두면 그 코드를 정상적으로 점유한 사람은
-      // (예전 기기/주소에 걸려 있던) 자기 닉네임 소유권을 새 기기로 옮길 수 있다.
-      // claimedBy 로 넘긴 코드 문서의 nick이 이 닉네임과 같고, 그 코드의 현재
-      // holder가 새 owner와 같아야 하므로 — 코드를 모르는 사람은 통과할 수 없다.
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owner', 'claimedBy'])
-        && realClientId(request.resource.data.owner)
-        && request.resource.data.claimedBy is string
-        && exists(/databases/$(database)/documents/passes/$(request.resource.data.claimedBy))
-        && get(/databases/$(database)/documents/passes/$(request.resource.data.claimedBy)).data.get('nick', '') == nick
-        && get(/databases/$(database)/documents/passes/$(request.resource.data.claimedBy)).data.holder == request.resource.data.owner;
-      allow delete: if false;
+      allow update, delete: if false;
     }
 
     // ── 입장 코드 ────────────────────────────
