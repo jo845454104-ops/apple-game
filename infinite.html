@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>🍎 무한 사과게임 (베타)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=80" />
+  <link rel="stylesheet" href="style.css?v=81" />
 </head>
 <body class="infinite-body">
   <div class="wrap infinite-wrap">
     <header class="topbar infinite-topbar">
-      <a class="ghost-btn infinite-back" href="game.html?v=80">← 사과게임으로</a>
+      <a class="ghost-btn infinite-back" href="game.html?v=81">← 사과게임으로</a>
       <h1 class="title infinite-title">🍎 무한 사과게임 <span class="beta-badge">BETA</span></h1>
       <div class="infinite-topbar__right">
         <button type="button" class="ghost-btn" id="inf-rules-btn">📖 점수 계산법</button>
@@ -20,7 +20,7 @@
 
     <p class="infinite-desc">
       터진 자리엔 새 사과가 다시 돋아나 <strong>끝없이</strong> 이어집니다.
-      <strong>6초</strong>로 시작해 버틸수록 제한시간이 짧아집니다. <strong>2.5초</strong> 안에 이어 터뜨리면 <strong>콤보</strong>가 쌓입니다.
+      제한시간은 <strong>6초</strong>에서 시작해 오래 버틸수록 짧아지고, <strong>2.5초</strong> 안에 이어 터뜨리면 <strong>콤보</strong>가 쌓입니다.
     </p>
 
     <div class="hud infinite-hud">
@@ -38,7 +38,7 @@
       </div>
       <div class="hud__box">
         <span class="hud__label">제한</span>
-        <span class="hud__value" id="inf-limit">6.0초</span>
+        <span class="hud__value" id="inf-limit">–</span>
       </div>
     </div>
 
@@ -54,7 +54,8 @@
               <p class="overlay__title">무한 사과게임 <span class="beta-badge">BETA</span></p>
               <p class="overlay__desc">
                 합이 10이 되는 사과를 드래그로 묶어 터뜨리세요.<br />
-                제한시간 안에 못 터뜨리면 게임이 끝납니다.
+                제한시간 안에 못 터뜨리면 게임이 끝납니다.<br />
+                첫 판은 8초, 이후에는 6초에서 점점 짧아집니다.
               </p>
               <button type="button" class="play-btn" id="inf-start-btn">시작</button>
             </div>
@@ -124,12 +125,13 @@
 
       <div class="rules-body">
         <p class="rules-formula">
-          획득 점수 = ( 사과 수 + 묶음 보너스 + 황금 보너스 ) × 콤보 배율
+          획득 점수 = ( 사과 점수 + 묶음 보너스 + 황금 보너스 ) × 콤보 배율
         </p>
 
         <dl class="rules-list">
-          <dt>사과 수</dt>
-          <dd>한 번에 터뜨린 사과 1개당 <b>10점</b>.</dd>
+          <dt>사과 점수</dt>
+          <dd>한 번에 터뜨린 사과 1개당 <b>10점</b>.<br />
+            <span class="rules-eg">2개 = 20점 · 3개 = 30점 · 5개 = 50점</span></dd>
 
           <dt>묶음 보너스</dt>
           <dd><b>4개 이상</b>을 한 번에 묶으면 4번째부터 1개당 <b>+30점</b>.<br />
@@ -147,8 +149,9 @@
             뜸을 들이면 성공해도 콤보가 <b>1로 초기화</b>됩니다.</dd>
 
           <dt>제한시간 (점점 짧아짐)</dt>
-          <dd><b>6초</b>로 시작해 <b>30초마다 0.1초씩</b> 줄고, <b>4.5초</b>에서 멈춥니다.<br />
-            <span class="rules-eg">시작 = 6.0초 · 2분 30초 = 5.5초 · 7분 30초↑ = 4.5초</span></dd>
+          <dd>첫 판만 <b>8초</b>를 주고, 이후로는 <b>6초</b>에서 시작해
+            <b>버틴 시간 30초마다 0.1초씩</b> 줄어 <b>4.5초</b>에서 멈춥니다.<br />
+            <span class="rules-eg">0~30초 = 6.0초 · 2분 30초 = 5.5초 · 7분 30초↑ = 4.5초</span></dd>
 
           <dt>게임 종료</dt>
           <dd>제한시간 안에 하나도 못 터뜨리면 종료. 터뜨릴 때마다 시간이 다시 채워집니다.</dd>
@@ -172,6 +175,6 @@
     </div>
   </div>
 
-  <script type="module" src="infinite.js?v=80"></script>
+  <script type="module" src="infinite.js?v=81"></script>
 </body>
 </html>

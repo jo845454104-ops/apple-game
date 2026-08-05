@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=80";
-import { getFingerprint } from "./fingerprint.js?v=80";
+import { getFirestoreApi } from "./firebase-app.js?v=81";
+import { getFingerprint } from "./fingerprint.js?v=81";
 import {
   getNickname,
   reserveNickname,
@@ -11,7 +11,7 @@ import {
   changeNickname,
   nextNicknameChangeAt,
   NICK_CHANGE_DAYS,
-} from "./chat.js?v=80";
+} from "./chat.js?v=81";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -363,7 +363,8 @@ function startGame() {
   sideScoreEl.textContent = "0";
   comboEl.textContent = "0";
   multEl.textContent = "×1.0";
-  limitEl.textContent = `${(POP_START_MS / 1000).toFixed(1)}초`;
+  // 첫 판은 FIRST_POP_MS 만큼 주므로 표시도 그 값으로 맞춘다
+  limitEl.textContent = `${(FIRST_POP_MS / 1000).toFixed(1)}초`;
   submitStatusEl.textContent = "";
 
   startOverlay.hidden = true;
