@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=73";
-import { getFingerprint } from "./fingerprint.js?v=73";
+import { getFirestoreApi } from "./firebase-app.js?v=74";
+import { getFingerprint } from "./fingerprint.js?v=74";
 import {
   getNickname,
   reserveNickname,
@@ -8,7 +8,7 @@ import {
   sendMessage,
   watchMessages,
   fetchChatLocked,
-} from "./chat.js?v=73";
+} from "./chat.js?v=74";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -17,22 +17,29 @@ import {
 // 가끔 황금 사과가 섞여 나와 추가 점수를 준다.
 // 점수 체계가 원래 게임과 달라 랭킹은 infiniteScores 컬렉션에 따로 쌓는다.
 
-const COLS = 11;
-const ROWS = 15;
+const COLS = 9;
+const ROWS = 12;
 const TARGET_SUM = 10;
-// 100점대 플레이어의 평균 판단 시간 기준. 넉넉하게 주지 않고 이 시간이
-// 지나면 바로 실패한다 — 계속 손이 빨라야 하는 긴장감이 핵심이다.
-const POP_MS = 5000;
-const FIRST_POP_MS = 8000; // 시작 직후 첫 판만 판을 한 번 훑어볼 시간을 조금 더 준다
+// 100점대 플레이어의 평균 판단 시간 기준. 계속 손이 빨라야 하는 긴장감이
+// 핵심이지만, 5초는 판을 읽기에 너무 빠듯해 7초로 잡았다.
+const POP_MS = 7000;
+const FIRST_POP_MS = 10000; // 시작 직후 첫 판만 판을 한 번 훑어볼 시간을 조금 더 준다
 const RESPAWN_MS = 1500; // 터진 칸에 새 사과가 돋아나기까지
 const SPROUT_WARN_MS = 700; // 돋아나기 이만큼 전부터 자리를 예고한다
 const GOLDEN_CHANCE = 0.06;
-const GOLDEN_BONUS = 15;
-const MAX_MULTIPLIER = 10;
+const GOLDEN_BONUS = 10;
+// 콤보 배율은 완만하게 올라간다. 콤보당 +0.1, 콤보 30에서 ×4.0로 멈춘다.
+// (예전엔 콤보 19에 ×10까지 올라 후반 한 번의 실수 여부가 점수를 통째로 갈랐다)
+const MULT_PER_COMBO = 0.1;
+const MAX_MULTIPLIER = 4;
+const MULT_CAP_COMBO = 30;
 // 4개 이상을 한 번에 묶으면 초과분 1개당 이만큼 더 준다.
 // 2~3개짜리를 반복하는 것보다 크게 묶는 쪽이 이득이 되게 하는 장치다.
 const BIG_COMBO_MIN = 4;
-const BIG_COMBO_BONUS = 5;
+const BIG_COMBO_BONUS = 3;
+// 콤보는 빠르게 이어 터뜨릴 때만 쌓인다. 직전 판정에서 이 시간을 넘기면
+// 터뜨리는 데 성공해도 콤보가 1로 돌아간다.
+const COMBO_WINDOW_MS = 2500;
 
 const gridEl = document.getElementById("inf-grid");
 const boardEl = gridEl.parentElement;
@@ -56,6 +63,9 @@ const submitStatusEl = document.getElementById("inf-submit-status");
 const rankingBtn = document.getElementById("inf-ranking-btn");
 const rankingModal = document.getElementById("inf-ranking-modal");
 const rankingClose = document.getElementById("inf-ranking-close");
+const rulesBtn = document.getElementById("inf-rules-btn");
+const rulesModal = document.getElementById("inf-rules-modal");
+const rulesClose = document.getElementById("inf-rules-close");
 const rankingList = document.getElementById("inf-ranking-list");
 
 let cells = [];
@@ -66,6 +76,7 @@ let clearEvents = 0;
 let playing = false;
 let scoreSubmitted = false;
 let startedAt = 0;
+let lastPopAt = 0;
 let popDeadline = 0;
 let currentPopMs = FIRST_POP_MS;
 let tickId = null;
@@ -175,7 +186,8 @@ function clearSelectionVisual() {
 }
 
 function multiplierFor(comboCount) {
-  return Math.min(1 + (comboCount - 1) * 0.5, MAX_MULTIPLIER);
+  const steps = Math.min(comboCount, MULT_CAP_COMBO);
+  return Math.min(1 + steps * MULT_PER_COMBO, MAX_MULTIPLIER);
 }
 
 function popCell(cell) {
@@ -206,7 +218,11 @@ function finalizeSelection() {
   const sum = selected.reduce((acc, c) => acc + c.value, 0);
 
   if (playing && sum === TARGET_SUM && selected.length > 0) {
-    combo += 1;
+    // 콤보는 빠르게 이어 터뜨릴 때만 쌓인다. 뜸을 들이면 1부터 다시 시작한다.
+    const now = Date.now();
+    const inWindow = lastPopAt > 0 && now - lastPopAt <= COMBO_WINDOW_MS;
+    combo = inWindow ? combo + 1 : 1;
+    lastPopAt = now;
     bestCombo = Math.max(bestCombo, combo);
     const mult = multiplierFor(combo);
     const goldenCount = selected.filter((c) => c.golden).length;
@@ -292,6 +308,7 @@ function startGame() {
   scoreSubmitted = false;
   playing = true;
   startedAt = Date.now();
+  lastPopAt = 0;
   currentPopMs = FIRST_POP_MS;
   popDeadline = startedAt + currentPopMs;
 
@@ -432,6 +449,16 @@ rankingClose.addEventListener("click", () => {
 });
 rankingModal.addEventListener("click", (e) => {
   if (e.target === rankingModal) rankingModal.hidden = true;
+});
+
+rulesBtn.addEventListener("click", () => {
+  rulesModal.hidden = false;
+});
+rulesClose.addEventListener("click", () => {
+  rulesModal.hidden = true;
+});
+rulesModal.addEventListener("click", (e) => {
+  if (e.target === rulesModal) rulesModal.hidden = true;
 });
 
 window.addEventListener("resize", () => {

@@ -1,4 +1,4 @@
-import { getFirestoreApi } from "./firebase-app.js?v=73";
+import { getFirestoreApi } from "./firebase-app.js?v=74";
 
 // 입장 코드
 // 운영자가 CLI로 발급한 코드를 가진 사람만 게임에 들어온다.

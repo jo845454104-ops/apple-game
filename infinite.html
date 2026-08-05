@@ -5,20 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>🍎 무한 사과게임 (베타)</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=73" />
+  <link rel="stylesheet" href="style.css?v=74" />
 </head>
 <body class="infinite-body">
   <div class="wrap infinite-wrap">
     <header class="topbar infinite-topbar">
-      <a class="ghost-btn infinite-back" href="game.html?v=73">← 사과게임으로</a>
+      <a class="ghost-btn infinite-back" href="game.html?v=74">← 사과게임으로</a>
       <h1 class="title infinite-title">🍎 무한 사과게임 <span class="beta-badge">BETA</span></h1>
-      <button type="button" class="ghost-btn" id="inf-ranking-btn">🏆 무한 랭킹</button>
+      <div class="infinite-topbar__right">
+        <button type="button" class="ghost-btn" id="inf-rules-btn">📖 점수 계산법</button>
+        <button type="button" class="ghost-btn" id="inf-ranking-btn">🏆 무한 랭킹</button>
+      </div>
     </header>
 
     <p class="infinite-desc">
       터진 자리엔 새 사과가 다시 돋아나 <strong>끝없이</strong> 이어집니다.
-      <strong>5초</strong> 안에 계속 터뜨려 <strong>콤보</strong>를 쌓으세요.
-      <strong>4개 이상</strong> 한 번에 묶으면 추가 점수! <span class="gold-hint">✨ 황금 사과</span>도 보너스!
+      <strong>7초</strong> 안에 계속 터뜨리세요. <strong>2.5초</strong> 안에 이어 터뜨리면 <strong>콤보</strong>가 쌓입니다.
     </p>
 
     <div class="hud infinite-hud">
@@ -48,7 +50,7 @@
               <p class="overlay__title">무한 사과게임 <span class="beta-badge">BETA</span></p>
               <p class="overlay__desc">
                 합이 10이 되는 사과를 드래그로 묶어 터뜨리세요.<br />
-                5초 안에 못 터뜨리면 게임이 끝납니다.
+                7초 안에 못 터뜨리면 게임이 끝납니다.
               </p>
               <button type="button" class="play-btn" id="inf-start-btn">시작</button>
             </div>
@@ -108,6 +110,49 @@
     </div>
   </div>
 
+  <div class="modal" id="inf-rules-modal" hidden>
+    <div class="modal__card infinite-card">
+      <div class="modal__header">
+        <h2>📖 점수 계산법</h2>
+        <button type="button" class="modal__close" id="inf-rules-close">×</button>
+      </div>
+
+      <div class="rules-body">
+        <p class="rules-formula">
+          획득 점수 = ( 사과 수 + 묶음 보너스 + 황금 보너스 ) × 콤보 배율
+        </p>
+
+        <dl class="rules-list">
+          <dt>사과 수</dt>
+          <dd>한 번에 터뜨린 사과 1개당 <b>1점</b>.</dd>
+
+          <dt>묶음 보너스</dt>
+          <dd><b>4개 이상</b>을 한 번에 묶으면 4번째부터 1개당 <b>+3점</b>.<br />
+            <span class="rules-eg">4개 = +3 · 5개 = +6 · 6개 = +9</span></dd>
+
+          <dt>✨ 황금 보너스</dt>
+          <dd>황금 사과 1개당 <b>+10점</b>.</dd>
+
+          <dt>콤보 배율</dt>
+          <dd>콤보 1당 <b>+0.1배</b>, 콤보 30에서 <b>×4.0</b>로 상한.<br />
+            <span class="rules-eg">콤보 1 = ×1.1 · 콤보 10 = ×2.0 · 콤보 30↑ = ×4.0</span></dd>
+
+          <dt>콤보 쌓는 법</dt>
+          <dd>직전에 터뜨린 뒤 <b>2.5초 안에</b> 다시 터뜨려야 콤보가 이어집니다.
+            뜸을 들이면 성공해도 콤보가 <b>1로 초기화</b>됩니다.</dd>
+
+          <dt>게임 종료</dt>
+          <dd><b>7초</b> 안에 하나도 못 터뜨리면 종료. 터뜨릴 때마다 시간이 다시 채워집니다.</dd>
+        </dl>
+
+        <p class="rules-example">
+          예) 콤보 10에서 황금 1개 포함 5개를 묶으면<br />
+          ( 5 + 6 + 10 ) × 2.0 = <b>42점</b>
+        </p>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="inf-ranking-modal" hidden>
     <div class="modal__card infinite-card">
       <div class="modal__header">
@@ -118,6 +163,6 @@
     </div>
   </div>
 
-  <script type="module" src="infinite.js?v=73"></script>
+  <script type="module" src="infinite.js?v=74"></script>
 </body>
 </html>

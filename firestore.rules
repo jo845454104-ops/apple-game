@@ -97,14 +97,15 @@ service cloud.firestore {
         && cleanName(request.resource.data.name)
         && request.resource.data.score is number
         && request.resource.data.score >= 0
-        && request.resource.data.score <= 8000
+        && request.resource.data.score <= 50000
         && request.resource.data.combo is number
         && request.resource.data.combo >= 0
-        && request.resource.data.combo <= 300
+        && request.resource.data.combo <= 1000
         && request.resource.data.clears is number
         && request.resource.data.clears >= 0
-        // 한 판당 최대치를 넉넉히 잡아 명백한 조작만 거른다
-        && request.resource.data.score <= (request.resource.data.clears + 1) * 20
+        // 판정 한 번의 이론상 최대치는 9개 전부 황금 + 최대 배율이라 400점대다.
+        // 넉넉히 잡아 명백한 조작만 거른다.
+        && request.resource.data.score <= (request.resource.data.clears + 1) * 500
         && request.resource.data.durationMs is number
         && request.resource.data.durationMs >= 0
         && request.resource.data.durationMs <= 1800000

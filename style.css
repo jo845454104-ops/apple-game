@@ -2752,10 +2752,87 @@ body.infinite-body {
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
 }
 
+.infinite-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 #inf-ranking-btn {
   background: linear-gradient(135deg, #fbbf24, #f59e0b);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   color: #402c00;
+}
+
+#inf-rules-btn {
+  background: rgba(255, 255, 255, 0.85);
+  color: #1a2436;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  padding: 9px 14px;
+}
+
+#inf-rules-btn:hover {
+  background: #fff;
+}
+
+.rules-body {
+  overflow-y: auto;
+  padding-top: 6px;
+}
+
+.rules-formula {
+  background: #14213d;
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.rules-list dt {
+  font-weight: 800;
+  font-size: 14px;
+  color: #1a2436;
+  margin-top: 12px;
+}
+
+.rules-list dd {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #475569;
+  margin-top: 3px;
+}
+
+.rules-list b {
+  color: #ef4444;
+}
+
+.rules-eg {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.rules-example {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #f1f5f9;
+  border: 2px solid #1a2436;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+  color: #1a2436;
+}
+
+.rules-example b {
+  color: #ef4444;
+  font-size: 15px;
 }
 
 .infinite-desc {
@@ -2817,10 +2894,10 @@ body.infinite-body {
   border: 4px solid #1a2436;
   border-radius: 24px;
   box-shadow: 0 10px 0 rgba(0, 0, 0, 0.2), 0 20px 40px rgba(0, 0, 0, 0.25);
-  /* 판이 11×15 세로형이라 높이가 폭의 약 1.36배다.
+  /* 판이 9×12 세로형이라 높이가 폭의 약 1.33배다.
      화면 높이에서 위아래 UI가 쓰는 만큼을 뺀 뒤 폭을 역산한다. */
   flex: 0 0 auto;
-  width: clamp(300px, calc((100vh - 260px) / 1.36), 520px);
+  width: clamp(320px, calc((100vh - 215px) / 1.33), 620px);
   max-width: 100%;
   padding: 12px;
 }
@@ -2831,13 +2908,17 @@ body.infinite-body {
     linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
   border: 3px solid #1a2436;
   border-radius: 16px;
-  /* 11×15 판. 시작 전 그리드가 비어 있어도 높이가 무너지지 않게 비율을 고정한다. */
-  aspect-ratio: 11 / 15;
+  /* 9×12 판. 시작 전 그리드가 비어 있어도 높이가 무너지지 않게 비율을 고정한다. */
+  aspect-ratio: 9 / 12;
 }
 
 .infinite-grid {
-  grid-template-columns: repeat(11, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 6px;
+}
+
+.infinite-grid .apple {
+  font-size: clamp(15px, 2.4vh, 24px);
 }
 
 /* 곧 새 사과가 돋아날 자리 예고 */
