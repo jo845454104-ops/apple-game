@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=65";
-import { nicknameKey } from "./profanity.js?v=65";
+import { getFirestoreApi } from "./firebase-app.js?v=66";
+import { nicknameKey } from "./profanity.js?v=66";
 
 // 입장 코드
 // 운영자가 CLI로 발급한 코드를 가진 사람만 게임에 들어온다.
@@ -125,45 +125,47 @@ export async function claimPass(code) {
 
   savePass(clean);
 
-  // 코드에 nick이 박혀 있으면(운영자가 발급 시 넣어둔 값) 자동으로
-  // 닉네임까지 확보한다. 실패해도 입장 자체는 막지 않는다 — game.html에서
-  // 수동으로 닉네임을 넣는 기존 흐름으로 자연스럽게 넘어간다.
-  if (data.nick) {
-    const gotNick = await claimNickname(data.nick, cid, clean).catch(() => false);
-    if (gotNick) {
-      try {
-        localStorage.setItem(NICK_KEY, data.nick);
-      } catch {
-        /* 저장 못 해도 이번 세션은 game.html에서 다시 시도하면 된다 */
-      }
-    }
-  }
-
-  return { ok: true, label: data.label || "" };
+  // 코드에 nick이 박혀 있으면(운영자가 발급 시 넣어둔 값) 화면에서
+  // "이어서 하기 / 새로 시작"을 고를 수 있게 후보로만 돌려준다.
+  // 여기서 바로 적용하지 않는다 — 사용자가 원치 않을 수 있다.
+  return { ok: true, label: data.label || "", nick: data.nick || "", code: clean };
 }
 
-// 닉네임을 확보한다. 비어 있으면 새로 만들고, 예전 기기에 걸려 있던
-// 내 닉네임이면(방금 이 코드로 정상 입장했으므로) 소유권을 이 기기로 옮긴다.
+// "이어서 하기"를 선택했을 때만 호출한다. 닉네임을 확보한다.
+// 비어 있으면 새로 만들고, 예전 기기에 걸려 있던 내 닉네임이면
+// (방금 이 코드로 정상 입장했으므로) 소유권을 이 기기로 옮긴다.
 // 전혀 다른 사람이 이미 쓰고 있는 닉네임이면 실패한다.
-async function claimNickname(nick, cid, code) {
+export async function applyNickname(nick, code) {
   const ctx = await getFirestoreApi();
   if (!ctx) return false;
   const { db, api } = ctx;
+  const cid = myCid();
   const ref = api.doc(db, "nicknames", nicknameKey(nick));
 
   const existing = await api.getDoc(ref).catch(() => null);
+  let ok;
   if (!existing?.exists()) {
-    return api
+    ok = await api
       .setDoc(ref, { owner: cid, createdAt: api.serverTimestamp() })
       .then(() => true)
       .catch(() => false);
+  } else if (existing.data().owner === cid) {
+    ok = true;
+  } else {
+    ok = await api
+      .updateDoc(ref, { owner: cid, claimedBy: code })
+      .then(() => true)
+      .catch(() => false);
   }
-  if (existing.data().owner === cid) return true;
 
-  return api
-    .updateDoc(ref, { owner: cid, claimedBy: code })
-    .then(() => true)
-    .catch(() => false);
+  if (ok) {
+    try {
+      localStorage.setItem(NICK_KEY, nick);
+    } catch {
+      /* 저장 못 해도 이번 세션은 game.html에서 다시 시도하면 된다 */
+    }
+  }
+  return ok;
 }
 
 function getNick() {

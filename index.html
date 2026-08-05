@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>🍎 사과게임 - 입장</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
-  <link rel="stylesheet" href="style.css?v=65" />
+  <link rel="stylesheet" href="style.css?v=66" />
   <script>
     try {
       var saved = localStorage.getItem("apple-game-theme");
@@ -38,12 +38,20 @@
 
     <p class="gate__status" id="pass-status"></p>
 
+    <div class="gate__found" id="pass-found" hidden>
+      <p>예전 닉네임 <strong id="found-nick"></strong>을(를) 찾았습니다.</p>
+      <div class="gate__row">
+        <button type="button" class="play-btn small" id="continue-btn">이어서 하기</button>
+        <button type="button" class="play-btn small ghost" id="fresh-btn">새로 시작</button>
+      </div>
+    </div>
+
     <p class="gate__help">
       코드가 없으면 정식공주에게 받으세요.<br />
       코드는 이 브라우저에 저장되어 다음부터는 자동으로 들어갑니다.
     </p>
   </main>
 
-  <script type="module" src="gate.js?v=65"></script>
+  <script type="module" src="gate.js?v=66"></script>
 </body>
 </html>

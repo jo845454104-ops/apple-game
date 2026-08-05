@@ -2647,6 +2647,43 @@ body {
   color: var(--slate-400);
 }
 
+.gate__found {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--slate-200);
+  border-radius: 14px;
+}
+
+.gate__found p {
+  font-size: 14px;
+  color: var(--slate-600);
+  margin: 0 0 12px;
+}
+
+.gate__found strong {
+  color: var(--accent);
+}
+
+.gate__found .gate__row {
+  gap: 8px;
+}
+
+.gate__found .play-btn.small {
+  flex: 1;
+}
+
+.gate__found .play-btn.ghost {
+  flex: 1;
+  color: var(--slate-600);
+  background: var(--slate-200);
+  box-shadow: none;
+}
+
+.gate__found .play-btn.ghost:hover {
+  background: var(--slate-300, var(--slate-200));
+}
+
 /* ── 리플레이 창 ──────────────────────────
    랭킹·기록실·관리자 창에서 열리므로 그것들보다 위에 떠야 한다.
    기본 모달과 z-index 가 같으면 뒤에 깔려 가려진다.

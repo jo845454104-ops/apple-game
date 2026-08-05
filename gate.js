@@ -1,4 +1,4 @@
-import { claimPass, savedPass } from "./pass.js?v=65";
+import { claimPass, applyNickname, savedPass } from "./pass.js?v=66";
 
 // 입장 화면. 코드가 맞으면 게임 페이지로 넘긴다.
 // 화면을 건너뛰고 game.html 을 직접 열 수는 있지만, 그쪽에서도 코드를 확인하고
@@ -7,9 +7,17 @@ import { claimPass, savedPass } from "./pass.js?v=65";
 const input = document.getElementById("pass-input");
 const btn = document.getElementById("pass-btn");
 const statusEl = document.getElementById("pass-status");
+const foundBox = document.getElementById("pass-found");
+const foundNickEl = document.getElementById("found-nick");
+const continueBtn = document.getElementById("continue-btn");
+const freshBtn = document.getElementById("fresh-btn");
 
 function go() {
-  location.replace("game.html?v=65");
+  location.replace("game.html?v=66");
+}
+
+function sanitize(value) {
+  return value.toUpperCase().replace(/[^A-Z0-9가-힣]/g, "").slice(0, 20);
 }
 
 async function tryEnter(code, quiet) {
@@ -22,6 +30,27 @@ async function tryEnter(code, quiet) {
   btn.disabled = false;
 
   if (res.ok) {
+    const alreadyHasNickname = (() => {
+      try {
+        return Boolean(localStorage.getItem("apple-game-nickname"));
+      } catch {
+        return false;
+      }
+    })();
+    if (res.nick && !alreadyHasNickname) {
+      // 이 코드에 예전 닉네임이 걸려 있으면 바로 들어가지 않고 고르게 한다.
+      statusEl.textContent = "";
+      foundNickEl.textContent = res.nick;
+      foundBox.hidden = false;
+      continueBtn.onclick = async () => {
+        continueBtn.disabled = true;
+        freshBtn.disabled = true;
+        await applyNickname(res.nick, res.code);
+        go();
+      };
+      freshBtn.onclick = () => go();
+      return true;
+    }
     statusEl.textContent = "확인되었습니다. 들어갑니다…";
     statusEl.className = "gate__status is-ok";
     go();
@@ -51,6 +80,18 @@ btn.addEventListener("click", () => tryEnter(input.value, false));
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") tryEnter(input.value, false);
 });
+
+// 한글 입력(IME) 조합 중에 값을 덮어쓰면 조합이 끊겨 한 글자도 못 친다.
+// 조합이 끝난 뒤에만 정리한다.
+let composing = false;
+input.addEventListener("compositionstart", () => {
+  composing = true;
+});
+input.addEventListener("compositionend", () => {
+  composing = false;
+  input.value = sanitize(input.value);
+});
 input.addEventListener("input", () => {
-  input.value = input.value.toUpperCase().replace(/[^A-Z0-9가-힣]/g, "").slice(0, 20);
+  if (composing) return;
+  input.value = sanitize(input.value);
 });
