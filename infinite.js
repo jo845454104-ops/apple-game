@@ -1,5 +1,5 @@
-import { getFirestoreApi } from "./firebase-app.js?v=78";
-import { getFingerprint } from "./fingerprint.js?v=78";
+import { getFirestoreApi } from "./firebase-app.js?v=79";
+import { getFingerprint } from "./fingerprint.js?v=79";
 import {
   getNickname,
   reserveNickname,
@@ -8,7 +8,7 @@ import {
   sendMessage,
   watchMessages,
   fetchChatLocked,
-} from "./chat.js?v=78";
+} from "./chat.js?v=79";
 
 // 무한 사과게임 (베타).
 // 기본 규칙은 원래 게임과 같다 — 드래그로 합이 10인 칸을 묶어 터뜨린다.
@@ -20,31 +20,35 @@ import {
 const COLS = 9;
 const ROWS = 10;
 const TARGET_SUM = 10;
-// 제한시간은 점수가 오를수록 짧아진다. 6초로 시작해 100점마다 0.1초씩 줄고
-// 4초에서 멈춘다 — 20단계, 즉 2000점부터는 계속 4초다.
+// 제한시간은 살아남은 시간이 길수록 짧아진다. 6초로 시작해 30초마다 0.1초씩
+// 줄고 4.5초에서 멈춘다 — 15단계, 즉 7분 30초를 넘기면 계속 4.5초다.
+// (점수 기준으로 하면 크게 묶는 사람만 갑자기 어려워져서 시간 기준으로 바꿨다)
 const POP_START_MS = 6000;
-const POP_MIN_MS = 4000;
+const POP_MIN_MS = 4500;
 const POP_STEP_MS = 100;
-const POP_STEP_SCORE = 100;
+const POP_STEP_SECONDS = 30;
 const FIRST_POP_MS = 8000; // 시작 직후 첫 판만 판을 한 번 훑어볼 시간을 조금 더 준다
 
-function popMsForScore(currentScore) {
-  const steps = Math.floor(currentScore / POP_STEP_SCORE);
+function popMsForElapsed(elapsedMs) {
+  const steps = Math.floor(elapsedMs / (POP_STEP_SECONDS * 1000));
   return Math.max(POP_MIN_MS, POP_START_MS - steps * POP_STEP_MS);
 }
-const RESPAWN_MS = 1500; // 터진 칸에 새 사과가 돋아나기까지
-const SPROUT_WARN_MS = 700; // 돋아나기 이만큼 전부터 자리를 예고한다
+const RESPAWN_MS = 3000; // 터진 칸에 새 사과가 돋아나기까지
+const SPROUT_WARN_MS = 1000; // 돋아나기 이만큼 전부터 자리를 예고한다
 const GOLDEN_CHANCE = 0.06;
-const GOLDEN_BONUS = 10;
-// 콤보 배율은 완만하게 올라간다. 콤보당 +0.1, 콤보 30에서 ×4.0로 멈춘다.
-// (예전엔 콤보 19에 ×10까지 올라 후반 한 번의 실수 여부가 점수를 통째로 갈랐다)
-const MULT_PER_COMBO = 0.1;
-const MAX_MULTIPLIER = 4;
-const MULT_CAP_COMBO = 30;
+// 점수 단위를 키워 한 판이 만 점대로 나오게 한다. 숫자가 크게 움직여야
+// 터뜨리는 맛이 산다 — 예전엔 잘해도 100점대라 밋밋했다.
+const APPLE_POINTS = 10;
+const GOLDEN_BONUS = 100;
+// 콤보 배율은 가파르게 올라간다. 콤보당 +0.2, 콤보 45에서 ×10로 멈춘다.
+// 콤보를 길게 잇는 것이 점수의 핵심이 되도록 배점을 크게 잡았다.
+const MULT_PER_COMBO = 0.2;
+const MAX_MULTIPLIER = 10;
+const MULT_CAP_COMBO = 45;
 // 4개 이상을 한 번에 묶으면 초과분 1개당 이만큼 더 준다.
 // 2~3개짜리를 반복하는 것보다 크게 묶는 쪽이 이득이 되게 하는 장치다.
 const BIG_COMBO_MIN = 4;
-const BIG_COMBO_BONUS = 3;
+const BIG_COMBO_BONUS = 30;
 // 콤보는 빠르게 이어 터뜨릴 때만 쌓인다. 직전 판정에서 이 시간을 넘기면
 // 터뜨리는 데 성공해도 콤보가 1로 돌아간다.
 const COMBO_WINDOW_MS = 2500;
@@ -224,6 +228,32 @@ function popCell(cell) {
   respawnTimers.add(id);
 }
 
+// 터뜨린 자리 한가운데에 "3 COMBO +250" 같은 표시를 띄웠다가 사라지게 한다.
+function showComboEffect(selected, comboCount, gained) {
+  const boardRect = boardEl.getBoundingClientRect();
+  let sumX = 0;
+  let sumY = 0;
+  selected.forEach((cell) => {
+    const r = cell.el.getBoundingClientRect();
+    sumX += r.left + r.width / 2 - boardRect.left;
+    sumY += r.top + r.height / 2 - boardRect.top;
+  });
+
+  const pop = document.createElement("div");
+  pop.className = "combo-pop";
+  if (comboCount >= 10) pop.classList.add("is-hot");
+  else if (comboCount >= 5) pop.classList.add("is-warm");
+  pop.innerHTML =
+    `<span class="combo-pop__combo">${comboCount} COMBO</span>` +
+    `<span class="combo-pop__gain">+${gained}</span>`;
+  pop.style.left = `${sumX / selected.length}px`;
+  pop.style.top = `${sumY / selected.length}px`;
+  boardEl.appendChild(pop);
+
+  // 애니메이션이 끝나면 스스로 사라진다
+  pop.addEventListener("animationend", () => pop.remove());
+}
+
 function finalizeSelection() {
   const selected = cells.filter((c) => !c.empty && c.el.classList.contains("is-selecting"));
   const sum = selected.reduce((acc, c) => acc + c.value, 0);
@@ -242,11 +272,12 @@ function finalizeSelection() {
         ? (selected.length - BIG_COMBO_MIN + 1) * BIG_COMBO_BONUS
         : 0;
     const gained = Math.round(
-      (selected.length + bigBonus + goldenCount * GOLDEN_BONUS) * mult
+      (selected.length * APPLE_POINTS + bigBonus + goldenCount * GOLDEN_BONUS) * mult
     );
     score += gained;
     clearEvents += 1;
 
+    showComboEffect(selected, combo, gained);
     selected.forEach(popCell);
 
     scoreEl.textContent = score;
@@ -254,8 +285,8 @@ function finalizeSelection() {
     comboEl.textContent = combo;
     multEl.textContent = `×${mult.toFixed(1)}`;
 
-    // 점수가 오를수록 다음 판정까지 주어지는 시간이 짧아진다
-    currentPopMs = popMsForScore(score);
+    // 오래 버틸수록 다음 판정까지 주어지는 시간이 짧아진다
+    currentPopMs = popMsForElapsed(now - startedAt);
     limitEl.textContent = `${(currentPopMs / 1000).toFixed(1)}초`;
     popDeadline = Date.now() + currentPopMs;
   }

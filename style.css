@@ -3020,6 +3020,61 @@ body.infinite-body {
   letter-spacing: 0.05em;
 }
 
+.combo-pop {
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  animation: combo-pop-rise 0.9s ease-out forwards;
+}
+
+.combo-pop__combo {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-shadow: 0 2px 0 #1a2436, 0 0 12px rgba(255, 255, 255, 0.6);
+}
+
+.combo-pop__gain {
+  font-size: 15px;
+  font-weight: 800;
+  color: #86efac;
+  text-shadow: 0 2px 0 #1a2436;
+}
+
+.combo-pop.is-warm .combo-pop__combo {
+  color: #fde047;
+}
+
+.combo-pop.is-hot .combo-pop__combo {
+  color: #fb7185;
+  font-size: 24px;
+}
+
+@keyframes combo-pop-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1.15);
+  }
+  45% {
+    transform: translate(-50%, -65%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -110%) scale(1);
+  }
+}
+
 .infinite-timer-seconds {
   font-size: 20px;
   font-weight: 800;
